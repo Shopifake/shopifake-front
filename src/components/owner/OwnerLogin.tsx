@@ -1,0 +1,125 @@
+import { useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Chrome, ArrowLeft } from "lucide-react";
+import { Logo } from "../shared/Logo";
+
+export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLogin: () => void; onSwitchToSignup: () => void; onReturnToMain?: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: { email?: string; password?: string } = {};
+
+    if (!email) newErrors.email = "Email is required";
+    if (!password) newErrors.password = "Password is required";
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      onLogin();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {onReturnToMain && (
+          <div className="mb-4">
+            <Button variant="ghost" onClick={onReturnToMain} className="gap-2 text-white hover:text-white/80 hover:bg-white/10">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Main Menu
+            </Button>
+          </div>
+        )}
+        <div className="flex justify-center mb-8">
+          <Logo />
+        </div>
+        
+        <Card className="shadow-lg bg-zinc-900 border-zinc-800">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-white">Welcome back</CardTitle>
+            <CardDescription className="text-zinc-400">Sign in to your Shopifake account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-white">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={`bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 ${errors.email ? "border-destructive" : ""}`}
+                />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-white">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 ${errors.password ? "border-destructive" : ""}`}
+                />
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <input type="checkbox" id="remember" className="rounded" />
+                  <Label htmlFor="remember" className="text-sm text-zinc-400">
+                    Remember me
+                  </Label>
+                </div>
+                <a href="#" className="text-sm text-white hover:underline">
+                  Forgot password?
+                </a>
+              </div>
+
+              <Button type="submit" className="w-full bg-black hover:bg-zinc-950 text-white border border-zinc-700">
+                Sign In
+              </Button>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-zinc-700" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-zinc-900 px-2 text-zinc-400">Or continue with</span>
+                </div>
+              </div>
+
+              <Button type="button" variant="outline" className="w-full bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700">
+                <Chrome className="mr-2 h-4 w-4" />
+                Google
+              </Button>
+            </form>
+
+            <div className="mt-4 text-center text-sm text-zinc-400">
+              Don't have an account?{" "}
+              <button
+                onClick={onSwitchToSignup}
+                className="text-white hover:underline"
+              >
+                Sign up
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
