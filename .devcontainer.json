@@ -37,12 +37,11 @@
   },
 
   "postCreateCommand": "npm install",
-  
-  "postStartCommand": "npm run dev",
 
   "remoteUser": "node",
   "remoteEnv": {
-    "NODE_ENV": "development"
+    "NODE_ENV": "development",
+    "DEVPOD": "true"
   }
 }
 
