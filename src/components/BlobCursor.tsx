@@ -62,6 +62,7 @@ export default function BlobCursor({
       const x = 'clientX' in e ? e.clientX : e.touches[0].clientX;
       const y = 'clientY' in e ? e.clientY : e.touches[0].clientY;
       
+      // Set position relative to container, accounting for the -50% transform
       mouseX.set(x - rect.left);
       mouseY.set(y - rect.top);
     },
@@ -96,6 +97,8 @@ export default function BlobCursor({
               key={i}
               className="blob"
               style={{
+                left: 0,
+                top: 0,
                 x,
                 y,
                 width: sizes[i],
@@ -103,7 +106,9 @@ export default function BlobCursor({
                 borderRadius: blobType === 'circle' ? '50%' : '0%',
                 backgroundColor: fillColor,
                 opacity: opacities[i],
-                boxShadow: `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px 0 ${shadowColor}`
+                boxShadow: `${shadowOffsetX}px ${shadowOffsetY}px ${shadowBlur}px 0 ${shadowColor}`,
+                translateX: '-50%',
+                translateY: '-50%'
               }}
             >
               <div
