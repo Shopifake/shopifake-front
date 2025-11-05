@@ -32,7 +32,7 @@ export function StorefrontHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b bg-gradient-to-r from-pink-50/95 to-green-50/95 backdrop-blur-sm",
+        "sticky top-0 z-50 backdrop-blur-sm storefront-header-gradient border-b",
         theme.accentBorderClass
       )}
     >

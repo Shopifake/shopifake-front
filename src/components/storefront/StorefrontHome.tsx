@@ -19,7 +19,7 @@ export function StorefrontHome({
   onProductClick: (id: string) => void;
   searchQuery: string;
 }) {
-  const { home, theme } = useStorefrontConfig();
+  const { home, theme, branding } = useStorefrontConfig();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState([0, 100]);
 
@@ -78,7 +78,7 @@ export function StorefrontHome({
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background storefront-section-background">
       {/* Hero Banner */}
   <div className={cn("relative border-b mb-8 overflow-hidden", theme.accentBorderClass)}>
         <div 
@@ -87,13 +87,21 @@ export function StorefrontHome({
             backgroundImage: `url('${home.hero.imageUrl}')`
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-pink-50/90 to-green-50/85" />
+        <div className="absolute inset-0 storefront-hero-overlay" />
         <div className="relative container mx-auto px-4 py-12">
           <div className="max-w-3xl flex items-center gap-8">
             <div className="flex-shrink-0">
-              <div className={cn("p-6 rounded-2xl shadow-lg", home.hero.iconWrapperClass)}>
-                <HeroIcon className="h-16 w-16 text-white" />
-              </div>
+              {branding.logoUrl ? (
+                <img
+                  src={branding.logoUrl}
+                  alt={branding.name}
+                  className="h-20 w-20 object-contain drop-shadow-xl"
+                />
+              ) : (
+                <div className={cn("p-6 rounded-2xl shadow-lg flex items-center justify-center", home.hero.iconWrapperClass)}>
+                  <HeroIcon className="h-16 w-16 text-white" />
+                </div>
+              )}
             </div>
             <div>
               <h1 className={cn("mb-2", home.hero.titleClass)}>{home.hero.title}</h1>
@@ -106,7 +114,7 @@ export function StorefrontHome({
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pb-8">
+  <div className="container mx-auto px-4 pb-8">
 
         <div className="flex gap-8">
           <aside className="hidden lg:block w-64 flex-shrink-0">

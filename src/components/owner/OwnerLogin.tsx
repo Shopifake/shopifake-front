@@ -7,8 +7,8 @@ import { Chrome, ArrowLeft } from "lucide-react";
 import { Logo } from "../shared/Logo";
 
 export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLogin: () => void; onSwitchToSignup: () => void; onReturnToMain?: () => void }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("a@a");
+  const [password, setPassword] = useState("password");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -56,6 +56,7 @@ export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLo
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={`bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 ${errors.email ? "border-destructive" : ""}`}
+    
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email}</p>

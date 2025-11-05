@@ -3641,6 +3641,104 @@ html {
   --ring: #9333ea;
   --sidebar-primary: #9333ea;
   --sidebar-ring: #9333ea;
+  --storefront-primary: #ec4899;
+  --storefront-primary-foreground: #ffffff;
+  --storefront-secondary: #10b981;
+  --storefront-secondary-foreground: #ffffff;
+  --storefront-gradient-from: #ec4899;
+  --storefront-gradient-to: #f43f5e;
+  --storefront-primary-transparent: rgba(236, 72, 153, 0.12);
+  --storefront-secondary-transparent: rgba(16, 185, 129, 0.12);
+}
+
+.storefront-text-primary {
+  color: var(--storefront-primary);
+}
+
+.storefront-text-secondary {
+  color: var(--storefront-secondary);
+}
+
+.storefront-heading-primary {
+  color: var(--storefront-primary);
+}
+
+.storefront-icon-gradient {
+  background: linear-gradient(135deg, var(--storefront-gradient-from), var(--storefront-gradient-to));
+}
+
+.storefront-hover-border-primary {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.storefront-hover-border-primary:hover {
+  border-color: var(--storefront-primary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.storefront-badge-primary {
+  background-color: var(--storefront-secondary);
+  color: var(--storefront-secondary-foreground);
+  border-color: transparent;
+}
+
+.storefront-btn-primary {
+  background-color: var(--storefront-primary);
+  color: var(--storefront-primary-foreground);
+  border-color: transparent;
+}
+
+.storefront-btn-primary:hover {
+  background-color: color-mix(in srgb, var(--storefront-primary) 90%, black 10%);
+}
+
+.storefront-icon-hover {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.storefront-icon-hover:hover {
+  background-color: var(--storefront-primary-transparent);
+  color: var(--storefront-primary);
+}
+
+.storefront-outline-hover {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.storefront-outline-hover:hover {
+  background-color: var(--storefront-primary-transparent);
+  color: var(--storefront-primary);
+  border-color: var(--storefront-primary);
+}
+
+.storefront-nav-hover {
+  transition: color 0.2s ease;
+}
+
+.storefront-nav-hover:hover {
+  color: var(--storefront-primary);
+}
+
+.storefront-accent-border {
+  border-color: var(--storefront-primary);
+}
+
+@supports (color-mix(in srgb, red, transparent)) {
+  .storefront-accent-border {
+    border-color: color-mix(in srgb, var(--storefront-primary) 40%, transparent);
+  }
+}
+
+.storefront-header-gradient {
+  background: linear-gradient(90deg, var(--storefront-primary-transparent), var(--storefront-secondary-transparent));
+}
+
+.storefront-hero-overlay {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), var(--storefront-primary-transparent), var(--storefront-secondary-transparent));
+}
+
+.storefront-section-background {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--storefront-primary-transparent), var(--storefront-secondary-transparent), transparent);
 }
 
 @property --tw-translate-x {

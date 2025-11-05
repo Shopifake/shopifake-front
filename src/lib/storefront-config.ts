@@ -9,6 +9,7 @@ export interface StorefrontBrandingConfig {
   iconGradientClass: string;
   nameClass: string;
   taglineClass: string;
+  logoUrl?: string;
 }
 
 export interface StorefrontNavigationConfig {
@@ -106,6 +107,12 @@ export interface StorefrontCartConfig {
 export interface StorefrontThemeConfig {
   wrapperClass: string;
   accentBorderClass: string;
+  primaryColor: string;
+  primaryForeground: string;
+  secondaryColor: string;
+  secondaryForeground: string;
+  gradientFrom: string;
+  gradientTo: string;
 }
 
 export interface StorefrontConfig {
@@ -136,9 +143,10 @@ export const mockStorefrontConfig: StorefrontConfig = {
     name: "Petal & Bloom",
     tagline: "Artisan Florals",
     Icon: Flower2,
-    iconGradientClass: "bg-gradient-to-br from-[#EC4899] to-[#F43F5E]",
-    nameClass: "text-[#EC4899]",
-    taglineClass: "text-[#10B981]",
+    iconGradientClass: "storefront-icon-gradient",
+    nameClass: "storefront-text-primary",
+    taglineClass: "storefront-text-secondary",
+    logoUrl: undefined,
   },
   navigation: {
     homeLabel: "Shop",
@@ -147,9 +155,9 @@ export const mockStorefrontConfig: StorefrontConfig = {
     accountLabel: "Account",
     mainMenuLabel: "Main Menu",
     searchPlaceholder: "Search products...",
-    navLinkHoverClass: "hover:text-[#EC4899]",
-    iconButtonHoverClass: "hover:bg-[#EC4899]/10 hover:text-[#EC4899]",
-    outlineButtonHoverClass: "hover:bg-[#EC4899]/10 hover:text-[#EC4899] hover:border-[#EC4899]",
+    navLinkHoverClass: "storefront-nav-hover",
+    iconButtonHoverClass: "storefront-icon-hover",
+    outlineButtonHoverClass: "storefront-outline-hover",
   },
   home: {
     hero: {
@@ -159,25 +167,25 @@ export const mockStorefrontConfig: StorefrontConfig = {
       imageUrl:
         "https://images.unsplash.com/photo-1666508130265-3d5491525a34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmbG93ZXIlMjBzaG9wJTIwY29sb3JmdWwlMjBib3VxdWV0fGVufDF8fHx8MTc2MjI5NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       Icon: Flower2,
-      iconWrapperClass: "bg-gradient-to-br from-[#EC4899] to-[#F43F5E]",
-      titleClass: "text-[#EC4899]",
-      subtitleClass: "text-[#10B981]",
+      iconWrapperClass: "storefront-icon-gradient",
+      titleClass: "storefront-text-primary",
+      subtitleClass: "storefront-text-secondary",
     },
     filterCategories: ["Bouquets", "Plants", "Specialty"],
     productSiteId: "1",
     productCard: {
-      hoverBorderClass: "hover:border-[#EC4899]/30",
-      titleClass: "text-[#EC4899]",
-      priceClass: "text-[#10B981]",
-      freshBadgeClass: "bg-[#10B981] hover:bg-[#10B981]/90",
+      hoverBorderClass: "storefront-hover-border-primary",
+      titleClass: "storefront-text-primary",
+      priceClass: "storefront-text-secondary",
+      freshBadgeClass: "storefront-badge-primary",
     },
   },
   categoriesPage: {
     heading: "Explore Our Collections",
-    headingClass: "text-[#EC4899]",
+    headingClass: "storefront-heading-primary",
     subheading: "From romantic roses to elegant orchids - find the perfect blooms",
-    cardHoverClass: "hover:border-[#EC4899]/30",
-    countClass: "text-[#EC4899]",
+    cardHoverClass: "storefront-hover-border-primary",
+    countClass: "storefront-text-primary",
     cards: [
       {
         name: "Bouquets",
@@ -221,7 +229,7 @@ export const mockStorefrontConfig: StorefrontConfig = {
     },
     story: {
       heading: "Our Story",
-      headingClass: "text-[#EC4899]",
+      headingClass: "storefront-heading-primary",
       imageUrl:
         "https://images.unsplash.com/photo-1595549269082-bdf7ac28b345?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmbG9yaXN0JTIwYXJyYW5naW5nJTIwZmxvd2Vyc3xlbnwxfHx8fDE3NjIyOTU4MDF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
       paragraphs: [
@@ -258,7 +266,7 @@ export const mockStorefrontConfig: StorefrontConfig = {
     ],
     contact: {
       heading: "Visit Our Shop",
-      headingClass: "text-[#EC4899]",
+      headingClass: "storefront-heading-primary",
       description:
         "Stop by to see our beautiful blooms in person, or give us a call for custom arrangements!",
       details: [
@@ -271,19 +279,25 @@ export const mockStorefrontConfig: StorefrontConfig = {
         "Sunday: 10AM - 4PM | Closed Mondays",
       ],
       extraNote: "Same-day delivery available for orders placed before 2PM",
-      extraNoteClass: "text-[#10B981]",
+      extraNoteClass: "storefront-text-secondary",
       imageUrl:
         "https://images.unsplash.com/photo-1718568698870-d80ad5cdf6e0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmbG93ZXIlMjBzaG9wJTIwaW50ZXJpb3J8ZW58MXx8fHwxNzYyMjQ1NDE4fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral",
     },
   },
   account: {
-    primaryButtonClass: "bg-[#EC4899] hover:bg-[#EC4899]/90 text-white",
+    primaryButtonClass: "storefront-btn-primary",
   },
   cart: {
-    emptyStateButtonClass: "bg-[#EC4899] hover:bg-[#EC4899]/90 text-white",
+    emptyStateButtonClass: "storefront-btn-primary",
   },
   theme: {
     wrapperClass: "storefront-theme",
-    accentBorderClass: "border-[#EC4899]/20",
+    accentBorderClass: "storefront-accent-border",
+    primaryColor: "#EC4899",
+    primaryForeground: "#ffffff",
+    secondaryColor: "#10B981",
+    secondaryForeground: "#ffffff",
+    gradientFrom: "#EC4899",
+    gradientTo: "#F43F5E",
   },
 };

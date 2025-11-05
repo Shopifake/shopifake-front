@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type RefObject } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
 import shopifakeLogo from "./assets/2647669fc3033d478bbf4d08d352d49682ddc623.png";
@@ -21,42 +21,56 @@ import { SiteCreation } from "./components/owner/SiteCreation";
 import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
 import { OwnerLogin } from "./components/owner/OwnerLogin";
 import { OwnerSignup } from "./components/owner/OwnerSignup";
-import { StorefrontConfigProvider, mockStorefrontConfig } from "./lib/storefront-config";
+import { mockStorefrontConfig, type StorefrontConfig } from "./lib/storefront-config";
+import { buildStorefrontConfigFromDraft, demoSiteDraft, type SiteDraft } from "./lib/site-preview";
 
 // Storefront Components
-import { StorefrontHeader } from "./components/storefront/StorefrontHeader";
-import { StorefrontHome } from "./components/storefront/StorefrontHome";
-import { ProductDetail } from "./components/storefront/ProductDetail";
-import { Cart } from "./components/storefront/Cart";
-import { Checkout } from "./components/storefront/Checkout";
-import { OrderConfirmation } from "./components/storefront/OrderConfirmation";
-import { Categories } from "./components/storefront/Categories";
-import { About } from "./components/storefront/About";
-import { Account } from "./components/storefront/Account";
+import { StorefrontExperience } from "./components/storefront/StorefrontExperience";
 
-type AppMode = "landing" | "owner" | "storefront";
+type AppMode = "landing" | "owner" | "storefront" | "preview";
 type OwnerView = "login" | "signup" | "dashboard";
 type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "site-create" | "audit" | "settings";
-type StorefrontView = "home" | "product-detail" | "cart" | "checkout" | "confirmation" | "categories" | "about" | "account";
-
-interface CartItem {
-  productId: string;
-  quantity: number;
-}
 
 export default function App() {
   const [mode, setMode] = useState<AppMode>("landing");
   const [ownerView, setOwnerView] = useState<OwnerView>("login");
   const [ownerPage, setOwnerPage] = useState<OwnerPage>("overview");
-  const [storefrontView, setStorefrontView] = useState<StorefrontView>("home");
-  
-  const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
+  const [ownerSelectedProductId, setOwnerSelectedProductId] = useState<string | undefined>();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [orderId, setOrderId] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  
-  const heroContainerRef = useRef<HTMLDivElement>(null);
+  const [storefrontConfig] = useState<StorefrontConfig>(mockStorefrontConfig);
+  const [previewDraft, setPreviewDraft] = useState<SiteDraft | null>(null);
+
+  const heroContainerRef = useRef<HTMLDivElement | null>(null);
+  const heroProximityContainerRef = heroContainerRef as unknown as RefObject<HTMLElement | null>;
+
+  const clearPreviewDraft = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("shopifake.previewDraft");
+    }
+    setPreviewDraft(null);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("preview") === "1") {
+      const storedDraft = localStorage.getItem("shopifake.previewDraft");
+      if (storedDraft) {
+        try {
+          const parsedDraft = JSON.parse(storedDraft) as SiteDraft;
+          setPreviewDraft(parsedDraft);
+          setMode("preview");
+        } catch (error) {
+          console.error("Failed to parse preview draft", error);
+        }
+      } else {
+        setMode("preview");
+      }
+    }
+  }, []);
 
   // Owner Dashboard Handlers
   const handleOwnerLogin = () => {
@@ -72,13 +86,14 @@ export default function App() {
   const handleOwnerLogout = () => {
     setOwnerView("login");
     setMode("landing");
+    clearPreviewDraft();
     toast.success("Logged out successfully");
   };
 
   const handleReturnToMain = () => {
     setMode("landing");
     setOwnerView("login");
-    setStorefrontView("home");
+    clearPreviewDraft();
   };
 
   const handleNavigate = (page: string) => {
@@ -90,19 +105,27 @@ export default function App() {
     setOwnerPage("site-create");
   };
 
+  const handlePreviewSite = (draft: SiteDraft) => {
+    setPreviewDraft({ ...draft, values: [...draft.values] });
+    localStorage.setItem("shopifake.previewDraft", JSON.stringify(draft));
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+    const previewUrl = `${baseUrl}?preview=1`;
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
+  };
+
   const handleAddProduct = () => {
-    setSelectedProductId(undefined);
+    setOwnerSelectedProductId(undefined);
     setOwnerPage("product-form");
   };
 
   const handleEditProduct = (id: string) => {
-    setSelectedProductId(id);
+    setOwnerSelectedProductId(id);
     setOwnerPage("product-form");
   };
 
   const handleProductFormBack = () => {
     setOwnerPage("products");
-    setSelectedProductId(undefined);
+    setOwnerSelectedProductId(undefined);
     toast.success("Product saved successfully!");
   };
 
@@ -123,55 +146,6 @@ export default function App() {
   const handleSiteNavigate = (page: string) => {
     setOwnerPage(page as OwnerPage);
   };
-
-  // Storefront Handlers
-  const handleProductClick = (id: string) => {
-    setSelectedProductId(id);
-    setStorefrontView("product-detail");
-  };
-
-  const handleAddToCart = (productId: string, quantity: number) => {
-    const existingItem = cartItems.find(item => item.productId === productId);
-    if (existingItem) {
-      setCartItems(cartItems.map(item =>
-        item.productId === productId
-          ? { ...item, quantity: item.quantity + quantity }
-          : item
-      ));
-    } else {
-      setCartItems([...cartItems, { productId, quantity }]);
-    }
-    toast.success("Added to cart!");
-  };
-
-  const handleUpdateCartQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      setCartItems(cartItems.filter(item => item.productId !== productId));
-    } else {
-      setCartItems(cartItems.map(item =>
-        item.productId === productId ? { ...item, quantity } : item
-      ));
-    }
-  };
-
-  const handleRemoveFromCart = (productId: string) => {
-    setCartItems(cartItems.filter(item => item.productId !== productId));
-    toast.success("Removed from cart");
-  };
-
-  const handleCheckout = () => {
-    setStorefrontView("checkout");
-  };
-
-  const handleOrderComplete = () => {
-    const newOrderId = `ORD-${Math.floor(Math.random() * 10000)}`;
-    setOrderId(newOrderId);
-    setCartItems([]);
-    setStorefrontView("confirmation");
-    toast.success("Order placed successfully!");
-  };
-
-  const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   // Landing Page
   if (mode === "landing") {
@@ -213,7 +187,7 @@ export default function App() {
                     label="The easier way to sell online"
                     fromFontVariationSettings="'wght' 400, 'opsz' 9"
                     toFontVariationSettings="'wght' 1000, 'opsz' 40"
-                    containerRef={heroContainerRef}
+                    containerRef={heroProximityContainerRef}
                     radius={150}
                     falloff="exponential"
                   />
@@ -224,7 +198,7 @@ export default function App() {
                     label="Start a business or grow an existing one with Shopifake. Get more than ecommerce software with tools to manage every part of your business."
                     fromFontVariationSettings="'wght' 400, 'opsz' 9"
                     toFontVariationSettings="'wght' 900, 'opsz' 35"
-                    containerRef={heroContainerRef}
+                    containerRef={heroProximityContainerRef}
                     radius={120}
                     falloff="exponential"
                   />
@@ -459,7 +433,11 @@ export default function App() {
             />
           )}
           {ownerPage === "site-create" && (
-            <SiteCreation onBack={handleBackToSites} />
+            <SiteCreation
+              onBack={handleBackToSites}
+              onPreview={handlePreviewSite}
+              initialDraft={previewDraft ?? demoSiteDraft}
+            />
           )}
           {ownerPage === "site-management" && selectedSiteId && (
             <SiteManagement 
@@ -478,7 +456,7 @@ export default function App() {
           )}
           {ownerPage === "product-form" && selectedSiteId && (
             <ProductForm
-              productId={selectedProductId}
+              productId={ownerSelectedProductId}
               onBack={handleProductFormBack}
             />
           )}
@@ -512,76 +490,46 @@ export default function App() {
   if (mode === "storefront") {
     return (
       <>
-        <Toaster />
-        <StorefrontConfigProvider value={mockStorefrontConfig}>
-          <div className={`min-h-screen bg-background ${mockStorefrontConfig.theme.wrapperClass}`}>
-          {storefrontView !== "confirmation" && (
-            <StorefrontHeader
-              cartCount={totalCartItems}
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onCartClick={() => setStorefrontView("cart")}
-              onLogoClick={() => setStorefrontView("home")}
-              onCategoriesClick={() => setStorefrontView("categories")}
-              onAboutClick={() => setStorefrontView("about")}
-              onAccountClick={() => setStorefrontView("account")}
-              onReturnToMain={handleReturnToMain}
-            />
-          )}
-
-          {storefrontView === "home" && (
-            <StorefrontHome 
-              onProductClick={handleProductClick}
-              searchQuery={searchQuery}
-            />
-          )}
-
-          {storefrontView === "product-detail" && selectedProductId && (
-            <ProductDetail
-              productId={selectedProductId}
-              onBack={() => setStorefrontView("home")}
-              onAddToCart={handleAddToCart}
-            />
-          )}
-
-          {storefrontView === "cart" && (
-            <Cart
-              items={cartItems}
-              onUpdateQuantity={handleUpdateCartQuantity}
-              onRemove={handleRemoveFromCart}
-              onCheckout={handleCheckout}
-              onContinueShopping={() => setStorefrontView("home")}
-            />
-          )}
-
-          {storefrontView === "checkout" && (
-            <Checkout
-              items={cartItems}
-              onComplete={handleOrderComplete}
-            />
-          )}
-
-          {storefrontView === "confirmation" && (
-            <OrderConfirmation
-              orderId={orderId}
-              onContinue={() => setStorefrontView("home")}
-            />
-          )}
-
-          {storefrontView === "categories" && (
-            <Categories onCategoryClick={() => setStorefrontView("home")} />
-          )}
-
-          {storefrontView === "about" && (
-            <About />
-          )}
-
-          {storefrontView === "account" && (
-            <Account />
-          )}
-          </div>
-        </StorefrontConfigProvider>
+        <StorefrontExperience
+          config={storefrontConfig}
+          onReturnToMain={handleReturnToMain}
+        />
       </>
+    );
+  }
+
+  if (mode === "preview") {
+    const config = previewDraft ? buildStorefrontConfigFromDraft(previewDraft) : null;
+
+    if (!config) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+          <h1 className="text-2xl font-semibold">Preview unavailable</h1>
+          <p className="text-muted-foreground max-w-md">
+            We could not find a site draft to preview. Return to the dashboard and launch a preview again.
+          </p>
+          <button
+            type="button"
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground"
+            onClick={() => {
+              clearPreviewDraft();
+              window.location.href = window.location.origin;
+            }}
+          >
+            Back to Shopifake
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <StorefrontExperience
+        config={config}
+        onReturnToMain={() => {
+          clearPreviewDraft();
+          window.location.href = window.location.origin;
+        }}
+      />
     );
   }
 

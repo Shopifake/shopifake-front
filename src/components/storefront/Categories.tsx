@@ -6,7 +6,7 @@ export function Categories({ onCategoryClick }: { onCategoryClick: (category: st
   const { categoriesPage } = useStorefrontConfig();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50/30 to-background">
+  <div className="min-h-screen storefront-section-background">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
           <h1 className={cn("mb-2", categoriesPage.headingClass)}>{categoriesPage.heading}</h1>
