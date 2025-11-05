@@ -162,6 +162,16 @@ export function SiteCreation({ onBack, onPreview, initialDraft }: SiteCreationPr
               />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="heroDescription">Hero description</Label>
+            <Textarea
+              id="heroDescription"
+              placeholder="Two to three sentences that reinforce your brand promise"
+              value={formData.heroDescription}
+              onChange={event => updateField("heroDescription", event.target.value)}
+              rows={3}
+            />
+          </div>
         </CardContent>
       </Card>
 

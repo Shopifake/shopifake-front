@@ -5,6 +5,7 @@ export interface SiteDraft {
   name: string;
   title: string;
   subtitle: string;
+  heroDescription: string;
   logoUrl: string;
   aboutPortraitOneUrl: string;
   aboutLandscapeUrl: string;
@@ -25,6 +26,7 @@ export function createEmptySiteDraft(): SiteDraft {
     name: "",
     title: "",
     subtitle: "",
+    heroDescription: "",
     logoUrl: "",
     aboutPortraitOneUrl: "",
     aboutLandscapeUrl: "",
@@ -43,10 +45,11 @@ export function createEmptySiteDraft(): SiteDraft {
 // Temporary seed to make the creation flow immediately testable.
 // Remove or replace with live data once the API integration is ready.
 export const demoSiteDraft: SiteDraft = {
-  bannerUrl: "https://images.unsplash.com/photo-1525362081669-2b476bb628c0?auto=format&fit=crop&w=1200&q=80",
+  bannerUrl: "https://t4.ftcdn.net/jpg/05/54/46/89/360_F_554468927_iwU3VYIjsaeopAb0WPYxVf21TloEhTEj.jpg",
   name: "Analog Atlas",
   title: "Analog Atlas Vinyl & Audio",
   subtitle: "Curated records, hi-fi essentials, and limited artist drops",
+  heroDescription: "Hand-picked analog records, hi-fi gear, and live in-store sessions every week.",
   logoUrl: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=200&q=80",
   aboutPortraitOneUrl: "https://images.unsplash.com/photo-1518895949257-7621c3c786d4?auto=format&fit=crop&w=900&q=80",
   aboutLandscapeUrl: "https://images.unsplash.com/photo-1522175142171-0420f1e3a7da?auto=format&fit=crop&w=1200&q=80",
@@ -100,6 +103,7 @@ export function buildStorefrontConfigFromDraft(draft: SiteDraft): StorefrontConf
         ...base.home.hero,
         title: draft.title || draft.name || base.home.hero.title,
         subtitle: draft.subtitle || base.home.hero.subtitle,
+        description: draft.heroDescription || base.home.hero.description,
         imageUrl: draft.bannerUrl || base.home.hero.imageUrl,
         iconWrapperClass: "storefront-icon-gradient",
         titleClass: "storefront-text-primary",
