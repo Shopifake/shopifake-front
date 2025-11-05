@@ -16,7 +16,7 @@ import { UserManagement } from "./components/owner/UserManagement";
 import { SitesList } from "./components/owner/SitesList";
 import { SiteManagement } from "./components/owner/SiteManagement";
 import { AuditLog } from "./components/owner/AuditLog";
-import { Settings } from "./components/owner/Settings";
+import { OrderManagement } from "./components/owner/OrderManagement";
 import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
 import { OwnerLogin } from "./components/owner/OwnerLogin";
 import { OwnerSignup } from "./components/owner/OwnerSignup";
@@ -34,7 +34,7 @@ import { Account } from "./components/storefront/Account";
 
 type AppMode = "landing" | "owner" | "storefront";
 type OwnerView = "login" | "signup" | "dashboard";
-type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "audit" | "settings";
+type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "audit" | "orders";
 type StorefrontView = "home" | "product-detail" | "cart" | "checkout" | "confirmation" | "categories" | "about" | "account";
 
 interface CartItem {
@@ -478,6 +478,12 @@ export default function App() {
               onBack={handleBackToSiteManagement}
             />
           )}
+          {ownerPage === "orders" && selectedSiteId && (
+            <OrderManagement 
+              siteId={selectedSiteId}
+              onBack={handleBackToSiteManagement}
+            />
+          )}
           {ownerPage === "users" && selectedSiteId && (
             <UserManagement 
               siteId={selectedSiteId}
@@ -489,9 +495,6 @@ export default function App() {
               siteId={selectedSiteId}
               onBack={handleBackToSiteManagement}
             />
-          )}
-          {ownerPage === "settings" && (
-            <Settings />
           )}
         </OwnerDashboardLayout>
       </>

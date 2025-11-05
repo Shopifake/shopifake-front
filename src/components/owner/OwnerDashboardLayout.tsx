@@ -35,7 +35,6 @@ export function OwnerDashboardLayout({ children, currentPage, onNavigate, onLogo
   const menuItems = [
     { id: "overview", label: "Dashboard", icon: LayoutDashboard },
     { id: "sites", label: "My Sites", icon: Globe },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
