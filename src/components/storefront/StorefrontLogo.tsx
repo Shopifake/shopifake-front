@@ -1,14 +1,18 @@
-import { Flower2 } from "lucide-react";
+import { cn } from "../ui/utils";
+import { useStorefrontConfig } from "../../lib/storefront-config";
 
 export function StorefrontLogo({ className = "" }: { className?: string }) {
+  const { branding } = useStorefrontConfig();
+  const Icon = branding.Icon;
+
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <div className="bg-gradient-to-br from-[#EC4899] to-[#F43F5E] p-2 rounded-lg shadow-sm">
-        <Flower2 className="h-5 w-5 text-white" />
+    <div className={cn("flex items-center gap-2", className)}>
+      <div className={cn("p-2 rounded-lg shadow-sm", branding.iconGradientClass)}>
+        <Icon className="h-5 w-5 text-white" />
       </div>
       <div className="flex flex-col">
-        <span className="text-xl text-[#EC4899] leading-none">Petal & Bloom</span>
-        <span className="text-xs text-[#10B981] italic">Artisan Florals</span>
+        <span className={cn("text-xl leading-none", branding.nameClass)}>{branding.name}</span>
+        <span className={cn("text-xs italic", branding.taglineClass)}>{branding.tagline}</span>
       </div>
     </div>
   );

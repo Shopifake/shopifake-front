@@ -17,9 +17,11 @@ import { SitesList } from "./components/owner/SitesList";
 import { SiteManagement } from "./components/owner/SiteManagement";
 import { AuditLog } from "./components/owner/AuditLog";
 import { Settings } from "./components/owner/Settings";
+import { SiteCreation } from "./components/owner/SiteCreation";
 import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
 import { OwnerLogin } from "./components/owner/OwnerLogin";
 import { OwnerSignup } from "./components/owner/OwnerSignup";
+import { StorefrontConfigProvider, mockStorefrontConfig } from "./lib/storefront-config";
 
 // Storefront Components
 import { StorefrontHeader } from "./components/storefront/StorefrontHeader";
@@ -34,7 +36,7 @@ import { Account } from "./components/storefront/Account";
 
 type AppMode = "landing" | "owner" | "storefront";
 type OwnerView = "login" | "signup" | "dashboard";
-type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "audit" | "settings";
+type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "site-create" | "audit" | "settings";
 type StorefrontView = "home" | "product-detail" | "cart" | "checkout" | "confirmation" | "categories" | "about" | "account";
 
 interface CartItem {
@@ -81,6 +83,11 @@ export default function App() {
 
   const handleNavigate = (page: string) => {
     setOwnerPage(page as OwnerPage);
+  };
+
+  const handleCreateSite = () => {
+    setSelectedSiteId(undefined);
+    setOwnerPage("site-create");
   };
 
   const handleAddProduct = () => {
@@ -447,9 +454,12 @@ export default function App() {
           {ownerPage === "overview" && <DashboardOverview />}
           {ownerPage === "sites" && (
             <SitesList 
-              onCreateSite={() => toast.success("Site creation flow would open here")} 
+              onCreateSite={handleCreateSite} 
               onManageSite={handleManageSite}
             />
+          )}
+          {ownerPage === "site-create" && (
+            <SiteCreation onBack={handleBackToSites} />
           )}
           {ownerPage === "site-management" && selectedSiteId && (
             <SiteManagement 
@@ -503,7 +513,8 @@ export default function App() {
     return (
       <>
         <Toaster />
-        <div className="min-h-screen bg-background storefront-theme">
+        <StorefrontConfigProvider value={mockStorefrontConfig}>
+          <div className={`min-h-screen bg-background ${mockStorefrontConfig.theme.wrapperClass}`}>
           {storefrontView !== "confirmation" && (
             <StorefrontHeader
               cartCount={totalCartItems}
@@ -568,7 +579,8 @@ export default function App() {
           {storefrontView === "account" && (
             <Account />
           )}
-        </div>
+          </div>
+        </StorefrontConfigProvider>
       </>
     );
   }

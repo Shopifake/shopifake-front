@@ -3,6 +3,8 @@ import { Input } from "../ui/input";
 import { StorefrontLogo } from "./StorefrontLogo";
 import { ShoppingCart, User, Search, Menu, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "../ui/sheet";
+import { cn } from "../ui/utils";
+import { useStorefrontConfig } from "../../lib/storefront-config";
 
 export function StorefrontHeader({ 
   cartCount, 
@@ -25,8 +27,15 @@ export function StorefrontHeader({
   onAccountClick: () => void;
   onReturnToMain?: () => void;
 }) {
+  const { navigation, theme } = useStorefrontConfig();
+
   return (
-    <header className="sticky top-0 z-50 border-b border-[#EC4899]/20 bg-gradient-to-r from-pink-50/95 to-green-50/95 backdrop-blur-sm">
+    <header
+      className={cn(
+        "sticky top-0 z-50 border-b bg-gradient-to-r from-pink-50/95 to-green-50/95 backdrop-blur-sm",
+        theme.accentBorderClass
+      )}
+    >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
@@ -35,9 +44,24 @@ export function StorefrontHeader({
             </button>
             
             <nav className="hidden md:flex gap-6">
-              <button onClick={onLogoClick} className="text-sm hover:text-[#EC4899] transition-colors">Shop</button>
-              <button onClick={onCategoriesClick} className="text-sm hover:text-[#EC4899] transition-colors">Categories</button>
-              <button onClick={onAboutClick} className="text-sm hover:text-[#EC4899] transition-colors">About</button>
+              <button
+                onClick={onLogoClick}
+                className={cn("text-sm transition-colors", navigation.navLinkHoverClass)}
+              >
+                {navigation.homeLabel}
+              </button>
+              <button
+                onClick={onCategoriesClick}
+                className={cn("text-sm transition-colors", navigation.navLinkHoverClass)}
+              >
+                {navigation.categoriesLabel}
+              </button>
+              <button
+                onClick={onAboutClick}
+                className={cn("text-sm transition-colors", navigation.navLinkHoverClass)}
+              >
+                {navigation.aboutLabel}
+              </button>
             </nav>
           </div>
 
@@ -45,7 +69,7 @@ export function StorefrontHeader({
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input 
-                placeholder="Search products..." 
+                placeholder={navigation.searchPlaceholder}
                 className="pl-9" 
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
@@ -55,17 +79,35 @@ export function StorefrontHeader({
 
           <div className="flex items-center gap-2">
             {onReturnToMain && (
-              <Button variant="outline" size="sm" onClick={onReturnToMain} className="hidden md:flex gap-2 hover:bg-[#EC4899]/10 hover:text-[#EC4899] hover:border-[#EC4899]">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReturnToMain}
+                className={cn(
+                  "hidden md:flex gap-2",
+                  navigation.outlineButtonHoverClass
+                )}
+              >
                 <ArrowLeft className="h-4 w-4" />
-                Main Menu
+                {navigation.mainMenuLabel}
               </Button>
             )}
             
-            <Button variant="ghost" size="icon" onClick={onAccountClick} className="hidden lg:flex hover:bg-[#EC4899]/10 hover:text-[#EC4899]">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onAccountClick}
+              className={cn("hidden lg:flex", navigation.iconButtonHoverClass)}
+            >
               <User className="h-5 w-5" />
             </Button>
             
-            <Button variant="ghost" size="icon" onClick={onCartClick} className="relative hover:bg-[#EC4899]/10 hover:text-[#EC4899]">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onCartClick}
+              className={cn("relative", navigation.iconButtonHoverClass)}
+            >
               <ShoppingCart className="h-5 w-5" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
@@ -76,7 +118,11 @@ export function StorefrontHeader({
 
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden hover:bg-[#EC4899]/10 hover:text-[#EC4899]">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("md:hidden", navigation.iconButtonHoverClass)}
+                >
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -88,17 +134,43 @@ export function StorefrontHeader({
                 <nav className="flex flex-col gap-4 mt-4">
                   {onReturnToMain && (
                     <>
-                      <button onClick={onReturnToMain} className="text-lg hover:text-[#EC4899] transition-colors flex items-center gap-2">
+                      <button
+                        onClick={onReturnToMain}
+                        className={cn(
+                          "text-lg transition-colors flex items-center gap-2",
+                          navigation.navLinkHoverClass
+                        )}
+                      >
                         <ArrowLeft className="h-4 w-4" />
-                        Main Menu
+                        {navigation.mainMenuLabel}
                       </button>
                       <div className="border-t my-2" />
                     </>
                   )}
-                  <button onClick={onLogoClick} className="text-lg hover:text-[#EC4899] transition-colors text-left">Shop</button>
-                  <button onClick={onCategoriesClick} className="text-lg hover:text-[#EC4899] transition-colors text-left">Categories</button>
-                  <button onClick={onAboutClick} className="text-lg hover:text-[#EC4899] transition-colors text-left">About</button>
-                  <button onClick={onAccountClick} className="text-lg hover:text-[#EC4899] transition-colors text-left">Account</button>
+                  <button
+                    onClick={onLogoClick}
+                    className={cn("text-lg transition-colors text-left", navigation.navLinkHoverClass)}
+                  >
+                    {navigation.homeLabel}
+                  </button>
+                  <button
+                    onClick={onCategoriesClick}
+                    className={cn("text-lg transition-colors text-left", navigation.navLinkHoverClass)}
+                  >
+                    {navigation.categoriesLabel}
+                  </button>
+                  <button
+                    onClick={onAboutClick}
+                    className={cn("text-lg transition-colors text-left", navigation.navLinkHoverClass)}
+                  >
+                    {navigation.aboutLabel}
+                  </button>
+                  <button
+                    onClick={onAccountClick}
+                    className={cn("text-lg transition-colors text-left", navigation.navLinkHoverClass)}
+                  >
+                    {navigation.accountLabel}
+                  </button>
                 </nav>
               </SheetContent>
             </Sheet>

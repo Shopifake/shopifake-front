@@ -6,9 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Slider } from "../ui/slider";
-import { SlidersHorizontal, Flower2 } from "lucide-react";
+import { SlidersHorizontal } from "lucide-react";
 import { mockProducts } from "../../lib/mock-data";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../ui/sheet";
+import { cn } from "../ui/utils";
+import { useStorefrontConfig } from "../../lib/storefront-config";
 
 export function StorefrontHome({ 
   onProductClick,
@@ -17,14 +19,16 @@ export function StorefrontHome({
   onProductClick: (id: string) => void;
   searchQuery: string;
 }) {
+  const { home, theme } = useStorefrontConfig();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState([0, 100]);
 
-  const categories = ["all", "Bouquets", "Plants", "Specialty"];
+  const categories = ["all", ...home.filterCategories];
+  const HeroIcon = home.hero.Icon;
 
-  // Demo storefront shows products from Site 1 (Petal & Bloom Flower Shop) only
+  // Demo storefront shows products for the configured site only
   const filteredProducts = mockProducts
-    .filter(p => p.siteId === "1") // Only show products from Petal & Bloom
+    .filter(p => p.siteId === home.productSiteId)
     .filter(p => p.status === "published")
     .filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -76,26 +80,26 @@ export function StorefrontHome({
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Banner */}
-      <div className="relative border-b border-[#EC4899]/20 mb-8 overflow-hidden">
+  <div className={cn("relative border-b mb-8 overflow-hidden", theme.accentBorderClass)}>
         <div 
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1666508130265-3d5491525a34?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmbG93ZXIlMjBzaG9wJTIwY29sb3JmdWwlMjBib3VxdWV0fGVufDF8fHx8MTc2MjI5NTY4Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral')`
+            backgroundImage: `url('${home.hero.imageUrl}')`
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-white/95 via-pink-50/90 to-green-50/85" />
         <div className="relative container mx-auto px-4 py-12">
           <div className="max-w-3xl flex items-center gap-8">
             <div className="flex-shrink-0">
-              <div className="bg-gradient-to-br from-[#EC4899] to-[#F43F5E] p-6 rounded-2xl shadow-lg">
-                <Flower2 className="h-16 w-16 text-white" />
+              <div className={cn("p-6 rounded-2xl shadow-lg", home.hero.iconWrapperClass)}>
+                <HeroIcon className="h-16 w-16 text-white" />
               </div>
             </div>
             <div>
-              <h1 className="mb-2 text-[#EC4899]">Petal & Bloom</h1>
-              <p className="text-2xl text-[#10B981] italic mb-3">Artisan Florals</p>
+              <h1 className={cn("mb-2", home.hero.titleClass)}>{home.hero.title}</h1>
+              <p className={cn("text-2xl italic mb-3", home.hero.subtitleClass)}>{home.hero.subtitle}</p>
               <p className="text-lg text-muted-foreground">
-                Hand-crafted with love by our expert florists. Fresh blooms daily.
+                {home.hero.description}
               </p>
             </div>
           </div>
@@ -150,7 +154,10 @@ export function StorefrontHome({
               {filteredProducts.map((product) => (
                 <Card
                   key={product.id}
-                  className="group cursor-pointer hover:shadow-xl hover:border-[#EC4899]/30 transition-all"
+                  className={cn(
+                    "group cursor-pointer hover:shadow-xl transition-all",
+                    home.productCard.hoverBorderClass
+                  )}
                   onClick={() => onProductClick(product.id)}
                 >
                   <CardContent className="p-0">
@@ -162,12 +169,12 @@ export function StorefrontHome({
                       />
                     </div>
                     <div className="p-4">
-                      <h3 className="mb-2 text-[#EC4899]">{product.name}</h3>
+                      <h3 className={cn("mb-2", home.productCard.titleClass)}>{product.name}</h3>
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {product.description}
                       </p>
                       <div className="flex items-center justify-between">
-                        <span className="text-xl text-[#10B981]">${product.price}</span>
+                        <span className={cn("text-xl", home.productCard.priceClass)}>${product.price}</span>
                         {product.stock === 0 ? (
                           <Badge variant="destructive">Sold Out</Badge>
                         ) : product.stock < 15 ? (
@@ -175,7 +182,7 @@ export function StorefrontHome({
                             Only {product.stock} left
                           </Badge>
                         ) : (
-                          <Badge className="bg-[#10B981] hover:bg-[#10B981]/90">Fresh Today</Badge>
+                          <Badge className={home.productCard.freshBadgeClass}>Fresh Today</Badge>
                         )}
                       </div>
                     </div>

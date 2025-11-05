@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
 import { mockProducts } from "../../lib/mock-data";
+import { cn } from "../ui/utils";
+import { useStorefrontConfig } from "../../lib/storefront-config";
 
 interface CartItem {
   productId: string;
@@ -22,6 +24,7 @@ export function Cart({
   onCheckout: () => void;
   onContinueShopping: () => void;
 }) {
+  const { cart } = useStorefrontConfig();
   const cartItems = items.map(item => ({
     ...item,
     product: mockProducts.find(p => p.id === item.productId)!
@@ -42,7 +45,7 @@ export function Cart({
               <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
               <h2 className="mb-2">Your cart is empty</h2>
               <p className="text-muted-foreground mb-6">Add some products to get started</p>
-              <Button onClick={onContinueShopping} className="bg-[#EC4899] hover:bg-[#EC4899]/90 text-white">
+              <Button onClick={onContinueShopping} className={cn(cart.emptyStateButtonClass)}>
                 Continue Shopping
               </Button>
             </CardContent>

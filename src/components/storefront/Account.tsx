@@ -4,8 +4,12 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { User, Package, Heart, Settings } from "lucide-react";
+import { cn } from "../ui/utils";
+import { useStorefrontConfig } from "../../lib/storefront-config";
 
 export function Account() {
+  const { account } = useStorefrontConfig();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -57,7 +61,7 @@ export function Account() {
                     <Label htmlFor="phone">Phone Number</Label>
                     <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" />
                   </div>
-                  <Button className="bg-[#EC4899] hover:bg-[#EC4899]/90 text-white">Save Changes</Button>
+                  <Button className={cn(account.primaryButtonClass)}>Save Changes</Button>
                 </div>
               </CardContent>
             </Card>
