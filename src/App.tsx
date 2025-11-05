@@ -166,6 +166,11 @@ export default function App() {
 
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Scroll to top when mode changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [mode]);
+
   // Landing Page
   if (mode === "landing") {
     return (
