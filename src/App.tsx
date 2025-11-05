@@ -8,17 +8,18 @@ import VariableProximity from "./components/VariableProximity";
 import BlobCursor from "./components/BlobCursor";
 
 // Owner Dashboard Components
-import { OwnerLogin } from "./components/owner/OwnerLogin";
-import { OwnerSignup } from "./components/owner/OwnerSignup";
-import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
 import { DashboardOverview } from "./components/owner/DashboardOverview";
 import { ProductList } from "./components/owner/ProductList";
 import { ProductForm } from "./components/owner/ProductForm";
 import { StockManagement } from "./components/owner/StockManagement";
 import { UserManagement } from "./components/owner/UserManagement";
-import { AuditLog } from "./components/owner/AuditLog";
 import { SitesList } from "./components/owner/SitesList";
 import { SiteManagement } from "./components/owner/SiteManagement";
+import { AuditLog } from "./components/owner/AuditLog";
+import { Settings } from "./components/owner/Settings";
+import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
+import { OwnerLogin } from "./components/owner/OwnerLogin";
+import { OwnerSignup } from "./components/owner/OwnerSignup";
 
 // Storefront Components
 import { StorefrontHeader } from "./components/storefront/StorefrontHeader";
@@ -490,10 +491,7 @@ export default function App() {
             />
           )}
           {ownerPage === "settings" && (
-            <div>
-              <h1>Settings</h1>
-              <p className="text-muted-foreground">Settings page coming soon...</p>
-            </div>
+            <Settings />
           )}
         </OwnerDashboardLayout>
       </>
