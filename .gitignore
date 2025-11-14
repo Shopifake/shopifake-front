@@ -1,0 +1,52 @@
+# Node modules
+/node_modules/
+
+# Build outputs
+/dist/
+/build/
+/.vite/
+/.turbo/
+
+# Production
+/coverage/
+
+# Local env files
+.env
+.env.*.local
+.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# TypeScript
+*.tsbuildinfo
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Misc
+*.tgz
+*.log
+.node_repl_history
+
+# Storybook
+out/
+
+# Optional: lockfiles (usually committed)
+# package-lock.json
+# pnpm-lock.yaml
+# yarn.lock
