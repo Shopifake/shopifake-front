@@ -221,7 +221,7 @@ export const mockProducts = [
     status: "published",
     category: "Showcase",
     description: "A warm amber and cedarwood blend used on preview storefronts to demonstrate merchandising.",
-    imageUrl: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://demo.eshopwebsite.co.uk/image/cache/catalog/demo/products/cat5_prod2-800x600.jpg",
     tags: ["preview", "signature", "candle"],
   },
   {
@@ -234,7 +234,7 @@ export const mockProducts = [
     status: "published",
     category: "Showcase",
     description: "Organic cotton tote featuring the store name, ideal for showcasing branding in demo sites.",
-    imageUrl: "https://images.unsplash.com/photo-1542293787938-4d2226c12e77?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://demo.eshopwebsite.co.uk/image/cache/catalog/demo/products/cat5_prod2-800x600.jpg",
     tags: ["preview", "tote", "merch"],
   },
   {
@@ -247,7 +247,7 @@ export const mockProducts = [
     status: "published",
     category: "Showcase",
     description: "Hand-glazed espresso cups that highlight curated lifestyle imagery for preview experiences.",
-    imageUrl: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "https://demo.eshopwebsite.co.uk/image/cache/catalog/demo/products/cat5_prod2-800x600.jpg",
     tags: ["preview", "ceramic", "espresso"],
   },
 ];

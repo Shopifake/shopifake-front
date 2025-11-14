@@ -37,20 +37,20 @@ export function createEmptySiteDraft(): SiteDraft {
     contactDescription: "",
     contactDetails: "",
     contactExtraNote: "",
-    primaryColor: "#EC4899",
-    secondaryColor: "#10B981",
+    primaryColor: "#000000",
+    secondaryColor: "#000000",
   };
 }
 
 // Temporary seed to make the creation flow immediately testable.
 // Remove or replace with live data once the API integration is ready.
 export const demoSiteDraft: SiteDraft = {
-  bannerUrl: "https://t4.ftcdn.net/jpg/05/54/46/89/360_F_554468927_iwU3VYIjsaeopAb0WPYxVf21TloEhTEj.jpg",
+  bannerUrl: "https://as1.ftcdn.net/jpg/04/64/70/80/1000_F_464708086_IyYKIbcIMzVBpN0HOKveCxjEArkd9n3b.jpg",
   name: "Analog Atlas",
   title: "Analog Atlas Vinyl & Audio",
   subtitle: "Curated records, hi-fi essentials, and limited artist drops",
   heroDescription: "Hand-picked analog records, hi-fi gear, and live in-store sessions every week.",
-  logoUrl: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=200&q=80",
+  logoUrl: "https://ravennaareachamber.com/wp-content/uploads/2017/03/your-company-lsiting.png",
   aboutPortraitOneUrl: "https://images.unsplash.com/photo-1518895949257-7621c3c786d4?auto=format&fit=crop&w=900&q=80",
   aboutLandscapeUrl: "https://images.unsplash.com/photo-1522175142171-0420f1e3a7da?auto=format&fit=crop&w=1200&q=80",
   aboutPortraitTwoUrl: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=900&q=80",
@@ -67,8 +67,8 @@ export const demoSiteDraft: SiteDraft = {
     "Drop into our Brooklyn flagship to spin new arrivals, book a private listening suite, or tune into a live DJ set.",
   contactDetails: "📍 421 Wythe Ave, Brooklyn, NY\n📧 crew@analogatlas.com\n📞 +1 (347) 555-2046",
   contactExtraNote: "Free stylus tune-ups every first Saturday of the month",
-  primaryColor: "#FF6B35",
-  secondaryColor: "#2EC4B6",
+  primaryColor: "#000000",
+  secondaryColor: "#000000",
 };
 
 export function buildStorefrontConfigFromDraft(draft: SiteDraft): StorefrontConfig {
