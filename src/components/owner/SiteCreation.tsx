@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, AlertTriangle } from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toast } from "sonner";
 import { createEmptySiteDraft, demoSiteDraft, type SiteDraft } from "../../lib/site-preview";
-import { useCreateSite } from "../../hooks/sites/useCreateSite";
-import type { SiteConfig } from "../../types/api/sitesApiTypes";
+import { useCreateSite, useCheckSlugAvailability, useSuggestSlug, useGetLanguages, useGetCurrencies } from "../../hooks/sites";
+import type { SiteConfig, Currency, Language } from "../../types/api/sitesApiTypes";
 
 interface SiteCreationProps {
   onBack: () => void;
@@ -36,11 +37,33 @@ const buildDraftState = (draft?: SiteDraft): SiteDraft => {
 
 export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }: SiteCreationProps) {
   const [formData, setFormData] = useState<SiteDraft>(() => buildDraftState(initialDraft));
+  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [currency, setCurrency] = useState<Currency>("USD");
+  const [language, setLanguage] = useState<Language>("EN");
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false);
+
   const { createSite, isLoading } = useCreateSite();
+  const { checkSlugAvailability } = useCheckSlugAvailability();
+  const { suggestSlug } = useSuggestSlug();
+  const { languages } = useGetLanguages();
+  const { currencies } = useGetCurrencies();
 
   useEffect(() => {
     setFormData(buildDraftState(initialDraft));
   }, [initialDraft]);
+
+  // Generate slug from name when name changes
+  useEffect(() => {
+    if (formData.name && !slug) {
+      const generatedSlug = formData.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      setSlug(generatedSlug);
+    }
+  }, [formData.name, slug]);
 
   const updateField = <K extends keyof SiteDraft>(field: K, value: SiteDraft[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -52,6 +75,29 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
       nextValues[index] = value;
       return { ...prev, values: nextValues as SiteDraft["values"] };
     });
+  };
+
+  const handleSlugChange = async (newSlug: string) => {
+    setSlug(newSlug);
+    setSlugError(null);
+
+    if (!newSlug) {
+      return;
+    }
+
+    setIsCheckingSlug(true);
+    const isAvailable = await checkSlugAvailability(newSlug);
+    setIsCheckingSlug(false);
+
+    if (isAvailable === false) {
+      setSlugError("This slug is already taken");
+      const suggestion = await suggestSlug(newSlug);
+      if (suggestion) {
+        setSlugError(`This slug is taken. Suggested: ${suggestion.suggestedSlug}`);
+      }
+    } else if (isAvailable === true) {
+      setSlugError(null);
+    }
   };
 
   const handlePreview = () => {
@@ -74,6 +120,11 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
   const handleCreation = async () => {
     if (!formData.name || !formData.title || !formData.subtitle || !formData.bannerUrl) {
       toast.error("Please fill the banner, name, title, and subtitle before creating.");
+      return;
+    }
+
+    if (slugError) {
+      toast.error("Please fix the slug error before creating.");
       return;
     }
 
@@ -103,8 +154,10 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
     // Create the site via API
     const site = await createSite({
       name: formData.name,
-      currency: "USD", // Default currency
-      language: "EN", // Default language
+      slug: slug || undefined,
+      description: description || undefined,
+      currency: currency,
+      language: language,
       config: JSON.stringify(siteConfig),
     });
 
@@ -130,12 +183,12 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
 
       <Card>
         <CardHeader>
-          <CardTitle>Storefront Identity</CardTitle>
+          <CardTitle>Basic Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Site Name *</Label>
               <Input
                 id="name"
                 placeholder="e.g. Maison Lumen"
@@ -144,7 +197,94 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="banner">Banner image URL</Label>
+              <Label htmlFor="slug">Slug</Label>
+              <div className="space-y-2">
+                <Input
+                  id="slug"
+                  placeholder="maison-lumen"
+                  value={slug}
+                  onChange={(e) => handleSlugChange(e.target.value)}
+                  className={slugError ? "border-destructive" : ""}
+                />
+                {isCheckingSlug && (
+                  <p className="text-xs text-muted-foreground">Checking availability...</p>
+                )}
+                {slugError && (
+                  <p className="text-xs text-destructive flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    {slugError}
+                  </p>
+                )}
+                {slug && !slugError && !isCheckingSlug && (
+                  <p className="text-xs text-muted-foreground">
+                    URL: https://{slug}.shopifake.com
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="A brief description of your store"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency *</Label>
+              <Select
+                value={currency}
+                onValueChange={(value) => setCurrency(value as Currency)}
+              >
+                <SelectTrigger id="currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencies?.currencies.map((curr) => (
+                    <SelectItem key={curr} value={curr}>
+                      {curr}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="language">Language *</Label>
+              <Select
+                value={language}
+                onValueChange={(value) => setLanguage(value as Language)}
+              >
+                <SelectTrigger id="language">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages?.languages.map((lang) => (
+                    <SelectItem key={lang} value={lang}>
+                      {lang}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Storefront Identity</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="banner">Banner image URL *</Label>
               <Input
                 id="banner"
                 placeholder="https://..."
@@ -353,8 +493,8 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
             <Eye className="mr-2 h-4 w-4" />
             Preview site
           </Button>
-          <Button onClick={handleCreation}>
-            Create site
+          <Button onClick={handleCreation} disabled={isLoading || !!slugError}>
+            {isLoading ? "Creating..." : "Create site"}
           </Button>
         </div>
       </div>

@@ -1,9 +1,10 @@
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText } from "lucide-react";
-import { useGetSiteById } from "../../hooks/sites";
+import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText, Power } from "lucide-react";
+import { useGetSiteById, useUpdateSiteStatus } from "../../hooks/sites";
 import { Skeleton } from "../ui/skeleton";
+import type { SiteStatus } from "../../types/api/sitesApiTypes";
 
 interface SiteManagementProps {
   siteId: string;
@@ -12,7 +13,8 @@ interface SiteManagementProps {
 }
 
 export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementProps) {
-  const { site, isLoading } = useGetSiteById(siteId);
+  const { site, isLoading, refetch } = useGetSiteById(siteId);
+  const { updateSiteStatus, isLoading: isUpdatingStatus } = useUpdateSiteStatus();
   
   if (isLoading) {
     return (
@@ -64,6 +66,28 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
 
   const statusDisplay = site.status.toLowerCase();
   const isActive = site.status === "ACTIVE";
+  const isDraft = site.status === "DRAFT";
+  const isDisabled = site.status === "DISABLED";
+
+  const handleStatusToggle = async () => {
+    if (!site) return;
+
+    let newStatus: SiteStatus;
+    if (site.status === "DRAFT") {
+      newStatus = "ACTIVE";
+    } else if (site.status === "ACTIVE") {
+      newStatus = "DISABLED";
+    } else if (site.status === "DISABLED") {
+      newStatus = "ACTIVE";
+    } else {
+      return;
+    }
+
+    const updatedSite = await updateSiteStatus(siteId, newStatus);
+    if (updatedSite) {
+      refetch();
+    }
+  };
 
   const managementOptions = [
     {
@@ -140,10 +164,23 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
             )}
           </div>
         </div>
-        <Button variant="outline" className="gap-2">
-          <Settings className="h-4 w-4" />
-          Site Settings
-        </Button>
+        <div className="flex gap-2">
+          {(isDraft || isActive || isDisabled) && (
+            <Button
+              variant={isDraft || isDisabled ? "default" : "destructive"}
+              className="gap-2"
+              onClick={handleStatusToggle}
+              disabled={isUpdatingStatus}
+            >
+              <Power className="h-4 w-4" />
+              {isDraft ? "Activate" : isActive ? "Disable" : "Activate"}
+            </Button>
+          )}
+          <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-settings")}>
+            <Settings className="h-4 w-4" />
+            Site Settings
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}

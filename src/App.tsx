@@ -15,6 +15,7 @@ import { StockManagement } from "./components/owner/StockManagement";
 import { UserManagement } from "./components/owner/UserManagement";
 import { SitesList } from "./components/owner/SitesList";
 import { SiteManagement } from "./components/owner/SiteManagement";
+import { SiteSettings } from "./components/owner/SiteSettings";
 import { AuditLog } from "./components/owner/AuditLog";
 import { Settings } from "./components/owner/Settings";
 import { SiteCreation } from "./components/owner/SiteCreation";
@@ -29,7 +30,7 @@ import { StorefrontExperience } from "./components/storefront/StorefrontExperien
 
 type AppMode = "landing" | "owner" | "storefront" | "preview";
 type OwnerView = "login" | "signup" | "dashboard";
-type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "site-create" | "audit" | "settings";
+type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "site-settings" | "site-create" | "audit" | "settings";
 
 export default function App() {
   const [mode, setMode] = useState<AppMode>("landing");
@@ -445,6 +446,13 @@ export default function App() {
               siteId={selectedSiteId}
               onBack={handleBackToSites}
               onNavigate={handleSiteNavigate}
+            />
+          )}
+          {ownerPage === "site-settings" && selectedSiteId && (
+            <SiteSettings 
+              siteId={selectedSiteId}
+              onBack={handleBackToSiteManagement}
+              onSiteDeleted={handleBackToSites}
             />
           )}
           {ownerPage === "products" && selectedSiteId && (

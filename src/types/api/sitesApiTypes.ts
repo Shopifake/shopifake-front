@@ -2,7 +2,7 @@
 
 export type Currency = "USD" | "EUR" | "GBP" | "JPY" | "CAD" | "AUD" | "CHF" | "CNY";
 export type Language = "EN" | "FR" | "DE" | "ES" | "IT" | "PT" | "NL" | "JA" | "ZH";
-export type SiteStatus = "DRAFT" | "ACTIVE" | "PENDING" | "SUSPENDED" | "ARCHIVED" | "DISABLED" | "DELETED";
+export type SiteStatus = "DRAFT" | "ACTIVE" | "DISABLED";
 
 export interface SiteConfig {
   bannerUrl: string;
