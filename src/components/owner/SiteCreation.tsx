@@ -7,10 +7,13 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
 import { createEmptySiteDraft, demoSiteDraft, type SiteDraft } from "../../lib/site-preview";
+import { useCreateSite } from "../../hooks/sites/useCreateSite";
+import type { SiteConfig } from "../../types/api/sitesApiTypes";
 
 interface SiteCreationProps {
   onBack: () => void;
   onPreview: (draft: SiteDraft) => void;
+  onSiteCreated?: () => void;
   initialDraft?: SiteDraft;
 }
 
@@ -31,8 +34,9 @@ const buildDraftState = (draft?: SiteDraft): SiteDraft => {
   };
 };
 
-export function SiteCreation({ onBack, onPreview, initialDraft }: SiteCreationProps) {
+export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }: SiteCreationProps) {
   const [formData, setFormData] = useState<SiteDraft>(() => buildDraftState(initialDraft));
+  const { createSite, isLoading } = useCreateSite();
 
   useEffect(() => {
     setFormData(buildDraftState(initialDraft));
@@ -65,6 +69,49 @@ export function SiteCreation({ onBack, onPreview, initialDraft }: SiteCreationPr
 
     onPreview(preparedDraft);
     toast.success("Preview ready in a new tab");
+  };
+
+  const handleCreation = async () => {
+    if (!formData.name || !formData.title || !formData.subtitle || !formData.bannerUrl) {
+      toast.error("Please fill the banner, name, title, and subtitle before creating.");
+      return;
+    }
+
+    toast.loading("Creating site...", { id: "creating" });
+
+    // Convert SiteDraft to SiteConfig format
+    const siteConfig: SiteConfig = {
+      bannerUrl: formData.bannerUrl,
+      name: formData.name,
+      title: formData.title,
+      subtitle: formData.subtitle,
+      heroDescription: formData.heroDescription,
+      logoUrl: formData.logoUrl,
+      aboutPortraitOneUrl: formData.aboutPortraitOneUrl,
+      aboutLandscapeUrl: formData.aboutLandscapeUrl,
+      aboutPortraitTwoUrl: formData.aboutPortraitTwoUrl,
+      history: formData.history,
+      values: [...formData.values],
+      contactHeading: formData.contactHeading,
+      contactDescription: formData.contactDescription,
+      contactDetails: formData.contactDetails,
+      contactExtraNote: formData.contactExtraNote,
+      primaryColor: formData.primaryColor || demoSiteDraft.primaryColor,
+      secondaryColor: formData.secondaryColor || demoSiteDraft.secondaryColor,
+    };
+
+    // Create the site via API
+    const site = await createSite({
+      name: formData.name,
+      currency: "USD", // Default currency
+      language: "EN", // Default language
+      config: JSON.stringify(siteConfig),
+    });
+
+    if (site) {
+      toast.success(`Site "${site.name}" created successfully!`, { id: "creating" });
+      onSiteCreated?.();
+    }
   };
 
   return (
@@ -302,9 +349,12 @@ export function SiteCreation({ onBack, onPreview, initialDraft }: SiteCreationPr
           >
             Reset to demo
           </Button>
-          <Button onClick={handlePreview}>
+          <Button variant="outline" onClick={handlePreview}>
             <Eye className="mr-2 h-4 w-4" />
             Preview site
+          </Button>
+          <Button onClick={handleCreation}>
+            Create site
           </Button>
         </div>
       </div>

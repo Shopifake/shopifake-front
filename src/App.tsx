@@ -436,6 +436,7 @@ export default function App() {
             <SiteCreation
               onBack={handleBackToSites}
               onPreview={handlePreviewSite}
+              onSiteCreated={handleBackToSites}
               initialDraft={previewDraft ?? demoSiteDraft}
             />
           )}

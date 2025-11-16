@@ -1,10 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Plus, ExternalLink, Settings } from "lucide-react";
-import { mockSites } from "../../lib/mock-data";
+import { Plus, ExternalLink } from "lucide-react";
+import { useGetSitesByOwner } from "../../hooks/sites/useGetSitesByOwner";
+import { Skeleton } from "../ui/skeleton";
 
 export function SitesList({ onCreateSite, onManageSite }: { onCreateSite: () => void; onManageSite: (siteId: string) => void }) {
+  const { sites, isLoading } = useGetSitesByOwner();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -18,65 +21,100 @@ export function SitesList({ onCreateSite, onManageSite }: { onCreateSite: () => 
         </Button>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {mockSites.map((site) => (
-          <Card key={site.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onManageSite(site.id)}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{site.name}</CardTitle>
-                  <a
-                    href={`https://${site.url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-[#3B82F6] hover:underline flex items-center gap-1 mt-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {site.url}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <Badge
-                  variant={site.status === "active" ? "default" : "secondary"}
-                  className={site.status === "active" ? "bg-[#22C55E] hover:bg-[#22C55E]/90" : ""}
-                >
-                  {site.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <p className="text-2xl">{site.products}</p>
-                    <p className="text-xs text-muted-foreground">Products</p>
+      {isLoading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : sites.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground mb-4">No sites yet. Create your first site to get started!</p>
+            <Button onClick={onCreateSite} className="bg-primary hover:bg-primary/90">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Site
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {sites.map((site) => {
+            // Parse config to get additional info if needed
+            let siteConfig: any = {};
+            try {
+              siteConfig = JSON.parse(site.config);
+            } catch (e) {
+              // Ignore parse errors
+            }
+
+            // Map status to display format
+            const statusDisplay = site.status.toLowerCase();
+            const isActive = site.status === "ACTIVE";
+
+            return (
+              <Card key={site.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onManageSite(site.id)}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{site.name}</CardTitle>
+                      {site.slug && (
+                        <a
+                          href={`https://${site.slug}.shopifake.com`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[#3B82F6] hover:underline flex items-center gap-1 mt-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {site.slug}.shopifake.com
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                    <Badge
+                      variant={isActive ? "default" : "secondary"}
+                      className={isActive ? "bg-[#22C55E] hover:bg-[#22C55E]/90" : ""}
+                    >
+                      {statusDisplay}
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-2xl">{site.orders}</p>
-                    <p className="text-xs text-muted-foreground">Orders</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      <p className="mb-1">Currency: {site.currency}</p>
+                      <p className="mb-1">Language: {site.language}</p>
+                      {site.description && <p className="line-clamp-2">{site.description}</p>}
+                    </div>
+                    <div className="flex justify-end pt-2">
+                      {site.slug && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`https://${site.slug}.shopifake.com`, '_blank');
+                          }}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-2xl">${site.revenue.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">Revenue</p>
-                  </div>
-                </div>
-                <div className="flex justify-end pt-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(`https://${site.url}`, '_blank');
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
