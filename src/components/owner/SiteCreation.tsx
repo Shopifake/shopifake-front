@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { createEmptySiteDraft, demoSiteDraft, type SiteDraft } from "../../lib/site-preview";
 import { useCreateSite, useCheckSlugAvailability, useSuggestSlug, useGetLanguages, useGetCurrencies } from "../../hooks/sites";
 import type { SiteConfig, Currency, Language } from "../../types/api/sitesApiTypes";
+import { getSiteUrl, BASE_DOMAIN } from "../../lib/domain-config";
 
 interface SiteCreationProps {
   onBack: () => void;
@@ -217,7 +218,7 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
                 )}
                 {slug && !slugError && !isCheckingSlug && (
                   <p className="text-xs text-muted-foreground">
-                    URL: https://{slug}.shopifake.com
+                    URL: {getSiteUrl(slug)}
                   </p>
                 )}
               </div>

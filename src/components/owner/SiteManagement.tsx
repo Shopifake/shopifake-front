@@ -5,6 +5,7 @@ import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText,
 import { useGetSiteById, useUpdateSiteStatus } from "../../hooks/sites";
 import { Skeleton } from "../ui/skeleton";
 import type { SiteStatus } from "../../types/api/sitesApiTypes";
+import { getSiteUrl, BASE_DOMAIN } from "../../lib/domain-config";
 
 interface SiteManagementProps {
   siteId: string;
@@ -150,12 +151,12 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
             </div>
             {site.slug && (
               <a
-                href={`https://${site.slug}.shopifake.com`}
+                href={getSiteUrl(site.slug)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-[#3B82F6] hover:underline flex items-center gap-1 mt-1"
               >
-                {site.slug}.shopifake.com
+                {site.slug}.{BASE_DOMAIN}
                 <ExternalLink className="h-3 w-3" />
               </a>
             )}

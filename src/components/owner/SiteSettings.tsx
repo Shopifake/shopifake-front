@@ -12,6 +12,7 @@ import { useGetSiteById, useUpdateSite, useDeleteSite, useCheckSlugAvailability,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog";
 import { Skeleton } from "../ui/skeleton";
 import type { Currency, Language } from "../../types/api/sitesApiTypes";
+import { getSiteUrl } from "../../lib/domain-config";
 
 interface SiteSettingsProps {
   siteId: string;
@@ -220,11 +221,11 @@ export function SiteSettings({ siteId, onBack, onSiteDeleted }: SiteSettingsProp
                   {slugError}
                 </p>
               )}
-              {formData.slug && !slugError && !isCheckingSlug && (
-                <p className="text-xs text-muted-foreground">
-                  URL: https://{formData.slug}.shopifake.com
-                </p>
-              )}
+                {formData.slug && !slugError && !isCheckingSlug && (
+                  <p className="text-xs text-muted-foreground">
+                    URL: {getSiteUrl(formData.slug)}
+                  </p>
+                )}
             </div>
           </div>
 

@@ -24,6 +24,10 @@ import { OwnerLogin } from "./components/owner/OwnerLogin";
 import { OwnerSignup } from "./components/owner/OwnerSignup";
 import { mockStorefrontConfig, type StorefrontConfig } from "./lib/storefront-config";
 import { buildStorefrontConfigFromDraft, demoSiteDraft, type SiteDraft } from "./lib/site-preview";
+import { getSubdomain } from "./lib/subdomain-utils";
+import { useGetSiteBySlug } from "./hooks/sites";
+import { buildStorefrontConfigFromSiteConfig } from "./lib/site-config-to-storefront";
+import type { SiteConfig } from "./types/api/sitesApiTypes";
 
 // Storefront Components
 import { StorefrontExperience } from "./components/storefront/StorefrontExperience";
@@ -38,11 +42,15 @@ export default function App() {
   const [ownerPage, setOwnerPage] = useState<OwnerPage>("overview");
   const [ownerSelectedProductId, setOwnerSelectedProductId] = useState<string | undefined>();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
-  const [storefrontConfig] = useState<StorefrontConfig>(mockStorefrontConfig);
+  const [storefrontConfig, setStorefrontConfig] = useState<StorefrontConfig>(mockStorefrontConfig);
   const [previewDraft, setPreviewDraft] = useState<SiteDraft | null>(null);
+  const [subdomain, setSubdomain] = useState<string | null>(null);
 
   const heroContainerRef = useRef<HTMLDivElement | null>(null);
   const heroProximityContainerRef = heroContainerRef as unknown as RefObject<HTMLElement | null>;
+
+  // Fetch site by subdomain
+  const { site: subdomainSite, isLoading: isLoadingSubdomainSite } = useGetSiteBySlug(subdomain);
 
   const clearPreviewDraft = () => {
     if (typeof window !== "undefined") {
@@ -51,8 +59,55 @@ export default function App() {
     setPreviewDraft(null);
   };
 
+  // Check for subdomain on mount and when hostname changes
   useEffect(() => {
     if (typeof window === "undefined") {
+      return;
+    }
+
+    const detectedSubdomain = getSubdomain();
+    setSubdomain(detectedSubdomain);
+
+    // If subdomain is detected, we'll handle it in the subdomainSite effect
+  }, []);
+
+  // Handle subdomain site loading
+  useEffect(() => {
+    if (subdomain && subdomainSite) {
+      // Check if site is active
+      if (subdomainSite.status !== "ACTIVE") {
+        setMode("landing");
+        return;
+      }
+
+      // Parse site config
+      let siteConfig: SiteConfig;
+      try {
+        siteConfig = JSON.parse(subdomainSite.config);
+      } catch (error) {
+        console.error("Failed to parse site config", error);
+        setMode("landing");
+        return;
+      }
+
+      // Build storefront config from site config
+      const config = buildStorefrontConfigFromSiteConfig(siteConfig, subdomainSite.name);
+      setStorefrontConfig(config);
+      setMode("storefront");
+    } else if (subdomain && !isLoadingSubdomainSite && !subdomainSite) {
+      // Subdomain detected but site not found
+      setMode("landing");
+    }
+  }, [subdomain, subdomainSite, isLoadingSubdomainSite]);
+
+  // Handle preview mode
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    // Don't check for preview if we're on a subdomain
+    if (subdomain) {
       return;
     }
 
@@ -71,7 +126,7 @@ export default function App() {
         setMode("preview");
       }
     }
-  }, []);
+  }, [subdomain]);
 
   // Owner Dashboard Handlers
   const handleOwnerLogin = () => {
@@ -495,13 +550,25 @@ export default function App() {
     );
   }
 
+  // Loading state for subdomain site
+  if (subdomain && isLoadingSubdomainSite) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading site...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Storefront
   if (mode === "storefront") {
     return (
       <>
         <StorefrontExperience
           config={storefrontConfig}
-          onReturnToMain={handleReturnToMain}
+          onReturnToMain={subdomain ? undefined : handleReturnToMain}
         />
       </>
     );

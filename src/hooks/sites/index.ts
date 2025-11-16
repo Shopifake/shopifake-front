@@ -1,6 +1,7 @@
 export { useCreateSite } from "./useCreateSite";
 export { useGetSitesByOwner } from "./useGetSitesByOwner";
 export { useGetSiteById } from "./useGetSiteById";
+export { useGetSiteBySlug } from "./useGetSiteBySlug";
 export { useUpdateSite } from "./useUpdateSite";
 export { useUpdateSiteStatus } from "./useUpdateSiteStatus";
 export { useDeleteSite } from "./useDeleteSite";

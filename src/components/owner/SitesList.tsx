@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 import { Plus, ExternalLink } from "lucide-react";
 import { useGetSitesByOwner } from "../../hooks/sites/useGetSitesByOwner";
 import { Skeleton } from "../ui/skeleton";
+import { getSiteUrl, BASE_DOMAIN } from "../../lib/domain-config";
 
 export function SitesList({ onCreateSite, onManageSite }: { onCreateSite: () => void; onManageSite: (siteId: string) => void }) {
   const { sites, isLoading } = useGetSitesByOwner();
@@ -68,13 +69,13 @@ export function SitesList({ onCreateSite, onManageSite }: { onCreateSite: () => 
                       <CardTitle className="text-lg">{site.name}</CardTitle>
                       {site.slug && (
                         <a
-                          href={`https://${site.slug}.shopifake.com`}
+                          href={getSiteUrl(site.slug)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-sm text-[#3B82F6] hover:underline flex items-center gap-1 mt-1"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {site.slug}.shopifake.com
+                          {site.slug}.{BASE_DOMAIN}
                           <ExternalLink className="h-3 w-3" />
                         </a>
                       )}
@@ -101,7 +102,7 @@ export function SitesList({ onCreateSite, onManageSite }: { onCreateSite: () => 
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`https://${site.slug}.shopifake.com`, '_blank');
+                            window.open(getSiteUrl(site.slug), '_blank');
                           }}
                         >
                           <ExternalLink className="h-4 w-4" />
