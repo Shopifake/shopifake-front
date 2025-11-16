@@ -31,8 +31,9 @@ import type { SiteConfig } from "./types/api/sitesApiTypes";
 
 // Storefront Components
 import { StorefrontExperience } from "./components/storefront/StorefrontExperience";
+import { SubdomainNotFound } from "./components/SubdomainNotFound";
 
-type AppMode = "landing" | "owner" | "storefront" | "preview";
+type AppMode = "landing" | "owner" | "storefront" | "preview" | "subdomain-not-found";
 type OwnerView = "login" | "signup" | "dashboard";
 type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "site-settings" | "site-create" | "audit" | "settings";
 
@@ -76,7 +77,7 @@ export default function App() {
     if (subdomain && subdomainSite) {
       // Check if site is active
       if (subdomainSite.status !== "ACTIVE") {
-        setMode("landing");
+        setMode("subdomain-not-found");
         return;
       }
 
@@ -86,7 +87,7 @@ export default function App() {
         siteConfig = JSON.parse(subdomainSite.config);
       } catch (error) {
         console.error("Failed to parse site config", error);
-        setMode("landing");
+        setMode("subdomain-not-found");
         return;
       }
 
@@ -96,7 +97,7 @@ export default function App() {
       setMode("storefront");
     } else if (subdomain && !isLoadingSubdomainSite && !subdomainSite) {
       // Subdomain detected but site not found
-      setMode("landing");
+      setMode("subdomain-not-found");
     }
   }, [subdomain, subdomainSite, isLoadingSubdomainSite]);
 
@@ -606,6 +607,16 @@ export default function App() {
           window.location.href = window.location.origin;
         }}
       />
+    );
+  }
+
+  // Subdomain not found
+  if (mode === "subdomain-not-found" && subdomain) {
+    return (
+      <>
+        <Toaster />
+        <SubdomainNotFound subdomain={subdomain} />
+      </>
     );
   }
 
