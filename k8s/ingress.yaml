@@ -4,11 +4,7 @@ metadata:
   name: shopifake-frontend-ingress
   namespace: shopifake-sandbox
   annotations:
-    # Traefik annotations (k3s uses Traefik by default)
     traefik.ingress.kubernetes.io/router.entrypoints: web
-    # Alternative: If using nginx ingress controller, uncomment these:
-    # nginx.ingress.kubernetes.io/server-snippet: |
-    #   server_name shopifake.axel-trepout.fr *.shopifake.axel-trepout.fr;
 spec:
   ingressClassName: traefik  # Change to 'nginx' if using nginx ingress controller
   rules:
@@ -24,10 +20,6 @@ spec:
             name: shopifake-frontend-service
             port:
               number: 80
-  # Wildcard subdomain rule for client sites
-  # This supports URLs like: my-site.shopifake.axel-trepout.fr
-  # Note: Some ingress controllers handle wildcards differently
-  # For Traefik, this should work. For nginx, you may need to use regex
   - host: "*.shopifake.axel-trepout.fr"
     http:
       paths:
