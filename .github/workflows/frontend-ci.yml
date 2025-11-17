@@ -50,7 +50,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/shopifake-front:latest
+          tags: ghcr.io/shopifake/shopifake-front:latest
           build-args: |
             VITE_BASE_DOMAIN=${{ secrets.VITE_BASE_DOMAIN }}
             VITE_API_URL=${{ secrets.VITE_API_URL }}
