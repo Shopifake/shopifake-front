@@ -183,7 +183,6 @@ export default function App() {
   const handleProductFormBack = () => {
     setOwnerPage("products");
     setOwnerSelectedProductId(undefined);
-    toast.success("Product saved successfully!");
   };
 
   const handleManageSite = (siteId: string) => {
@@ -521,6 +520,7 @@ export default function App() {
           )}
           {ownerPage === "product-form" && selectedSiteId && (
             <ProductForm
+              siteId={selectedSiteId}
               productId={ownerSelectedProductId}
               onBack={handleProductFormBack}
             />
