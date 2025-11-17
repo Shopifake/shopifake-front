@@ -50,3 +50,6 @@ out/
 # package-lock.json
 # pnpm-lock.yaml
 # yarn.lock
+*/lange-config.kubeconfig
+k8s/deploy_all.sh
+k8s/.env

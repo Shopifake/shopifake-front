@@ -1,0 +1,32 @@
+image:
+  repository: ghcr.io/shopifake/shopifake-front/app
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+  hosts:
+    - host: shopifake.axel-trepout.fr
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: "*.shopifake.axel-trepout.fr"
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+
+resources: {}
+
+imagePullSecretName: ghcr-secret
+podAnnotations: {}
