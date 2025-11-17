@@ -41,7 +41,7 @@ export interface SiteResponse {
   currency: Currency;
   language: Language;
   status: SiteStatus;
-  ownerId: number;
+  ownerId: string;
   config: string; // JSON string of SiteConfig
   createdAt: string;
   updatedAt: string;

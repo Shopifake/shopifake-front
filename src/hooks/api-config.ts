@@ -10,5 +10,5 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_BASE_URL = getApiBaseUrl();
-export const DEFAULT_OWNER_ID = 1;
+export const DEFAULT_OWNER_ID = "11111111-1111-1111-1111-111111111111";
 

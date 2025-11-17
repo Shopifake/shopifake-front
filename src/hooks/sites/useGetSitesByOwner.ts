@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import type { SiteResponse } from "../../types/api/sitesApiTypes";
 import { API_BASE_URL, DEFAULT_OWNER_ID } from "../api-config";
 
-export function useGetSitesByOwner(ownerId: number = DEFAULT_OWNER_ID) {
+export function useGetSitesByOwner(ownerId: string = DEFAULT_OWNER_ID) {
   const [sites, setSites] = useState<SiteResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);

@@ -44,7 +44,7 @@ export function useGetSiteBySlug(slug: string | null) {
                 currency: "EUR",
                 language: "FR",
                 status: "ACTIVE",
-                ownerId: 1,
+                ownerId: "11111111-1111-1111-1111-111111111111",
                 config: JSON.stringify({
                   bannerUrl: "",
                   name: "Site de Test",
@@ -106,7 +106,7 @@ export function useGetSiteBySlug(slug: string | null) {
             currency: "EUR",
             language: "FR",
             status: "ACTIVE",
-            ownerId: 1,
+            ownerId: "11111111-1111-1111-1111-111111111111",
             config: JSON.stringify({
               bannerUrl: "",
               name: "Site de Test",
@@ -174,7 +174,7 @@ export function useGetSiteBySlug(slug: string | null) {
               currency: "EUR",
               language: "FR",
               status: "ACTIVE",
-              ownerId: 1,
+              ownerId: "11111111-1111-1111-1111-111111111111",
               config: JSON.stringify({
                 bannerUrl: "",
                 name: "Site de Test",
@@ -236,7 +236,7 @@ export function useGetSiteBySlug(slug: string | null) {
           currency: "EUR",
           language: "FR",
           status: "ACTIVE",
-          ownerId: 1,
+          ownerId: "11111111-1111-1111-1111-111111111111",
           config: JSON.stringify({
             bannerUrl: "",
             name: "Site de Test",
