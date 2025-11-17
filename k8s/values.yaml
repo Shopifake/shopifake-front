@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/shopifake/shopifake-front/app
+  repository: ghcr.io/shopifake/shopifake-front
   tag: "latest"
   pullPolicy: IfNotPresent
 

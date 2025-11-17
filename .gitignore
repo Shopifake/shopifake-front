@@ -53,3 +53,4 @@ out/
 */lange-config.kubeconfig
 k8s/deploy_all.sh
 k8s/.env
+k8s/k9s.sh
