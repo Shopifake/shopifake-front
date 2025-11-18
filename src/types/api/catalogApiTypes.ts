@@ -1,12 +1,53 @@
 export type ProductStatus = "DRAFT" | "PUBLISHED" | "SCHEDULED";
 
-export interface ProductFilterRequest {
+export type FilterType = "CATEGORICAL" | "QUANTITATIVE" | "DATETIME";
+
+export interface CreateFilterRequest {
+  siteId: string;
   key: string;
-  value: string;
+  type: FilterType;
+  displayName?: string;
+  values?: string[];
+  unit?: string;
+  minBound?: number;
+  maxBound?: number;
 }
 
-export interface ProductFilterResponse extends ProductFilterRequest {
+export interface FilterResponse {
   id: string;
+  siteId: string;
+  key: string;
+  type: FilterType;
+  displayName?: string;
+  values?: string[];
+  unit?: string;
+  minBound?: number;
+  maxBound?: number;
+  createdAt: string;
+}
+
+export interface ProductFilterAssignmentRequest {
+  filterId: string;
+  textValue?: string;
+  numericValue?: number;
+  minValue?: number;
+  maxValue?: number;
+  startAt?: string;
+  endAt?: string;
+}
+
+export interface ProductFilterAssignmentResponse {
+  filterId: string;
+  key: string;
+  displayName?: string;
+  type: FilterType;
+  unit?: string;
+  textValue?: string;
+  numericValue?: number;
+  minValue?: number;
+  maxValue?: number;
+  startAt?: string;
+  endAt?: string;
 }
 
 export interface CategoryResponse {
@@ -30,7 +71,7 @@ export interface CreateProductRequest {
   sku: string;
   status?: ProductStatus;
   scheduledPublishAt?: string;
-  filters?: ProductFilterRequest[];
+  filters?: ProductFilterAssignmentRequest[];
 }
 
 export interface ProductResponse {
@@ -43,7 +84,7 @@ export interface ProductResponse {
   sku: string;
   status: ProductStatus;
   scheduledPublishAt?: string;
-  filters: ProductFilterResponse[];
+  filters: ProductFilterAssignmentResponse[];
   categories: CategoryResponse[];
   createdAt: string;
   updatedAt: string;
@@ -55,7 +96,7 @@ export interface UpdateProductRequest {
   images?: string[];
   categoryIds?: string[];
   sku?: string;
-  filters?: ProductFilterRequest[];
+  filters?: ProductFilterAssignmentRequest[];
 }
 
 export interface UpdateProductStatusRequest {

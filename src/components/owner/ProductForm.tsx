@@ -16,11 +16,19 @@ import {
   useGetProduct,
   useListCategories,
   useCreateCategory,
+  useListFilters,
+  useCreateFilter,
 } from "../../hooks/catalog";
 import { useCreateInventory } from "../../hooks/inventory";
 import { useCreatePrice, useUpdatePrice, useGetActivePrice } from "../../hooks/pricing";
 import { useGetSiteById } from "../../hooks/sites";
-import type { ProductFilterRequest, ProductStatus } from "../../types/api/catalogApiTypes";
+import type {
+  CreateFilterRequest,
+  FilterResponse,
+  FilterType,
+  ProductFilterAssignmentRequest,
+  ProductStatus,
+} from "../../types/api/catalogApiTypes";
 
 type ProductFormProps = {
   siteId: string;
@@ -30,9 +38,74 @@ type ProductFormProps = {
 
 const PRODUCT_STATUSES: ProductStatus[] = ["DRAFT", "PUBLISHED", "SCHEDULED"];
 
-type FilterField = {
+type FilterAssignmentField = {
+  filterId: string;
+  textValue: string;
+  numericValue: string;
+  minValue: string;
+  maxValue: string;
+  startAt: string;
+  endAt: string;
+};
+
+type NewFilterFormState = {
   key: string;
-  value: string;
+  displayName: string;
+  type: FilterType;
+  valuesText: string;
+  unit: string;
+  minBound: string;
+  maxBound: string;
+};
+
+const createEmptyFilterAssignment = (filterId = ""): FilterAssignmentField => ({
+  filterId,
+  textValue: "",
+  numericValue: "",
+  minValue: "",
+  maxValue: "",
+  startAt: "",
+  endAt: "",
+});
+
+const INITIAL_NEW_FILTER_FORM: NewFilterFormState = {
+  key: "",
+  displayName: "",
+  type: "CATEGORICAL",
+  valuesText: "",
+  unit: "",
+  minBound: "",
+  maxBound: "",
+};
+
+const toInputDateTime = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toISOString().slice(0, 16);
+};
+
+const toISOStringIfValid = (value: string) => {
+  if (!value) {
+    return undefined;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+  return date.toISOString();
+};
+
+const parseNumberOrUndefined = (value: string) => {
+  if (!value.trim()) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 };
 
 export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
@@ -48,9 +121,12 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
     stockToAdd: "0",
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [filters, setFilters] = useState<FilterField[]>([{ key: "", value: "" }]);
+  const [filterAssignments, setFilterAssignments] = useState<FilterAssignmentField[]>([
+    createEmptyFilterAssignment(),
+  ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newFilterForm, setNewFilterForm] = useState<NewFilterFormState>(INITIAL_NEW_FILTER_FORM);
 
   const { site, isLoading: isLoadingSite } = useGetSiteById(siteId);
   const { categories, isLoading: isLoadingCategories, refetch: refetchCategories } = useListCategories(siteId);
@@ -63,6 +139,12 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
   const { createPrice, isLoading: isCreatingPrice } = useCreatePrice();
   const { updatePrice, isLoading: isUpdatingPrice } = useUpdatePrice();
   const { createCategory, isLoading: isCreatingCategory } = useCreateCategory();
+  const {
+    filters: availableFilters,
+    isLoading: isLoadingFilters,
+    refetch: refetchFilters,
+  } = useListFilters(siteId);
+  const { createFilter, isLoading: isCreatingFilter } = useCreateFilter();
 
   useEffect(() => {
     if (site?.currency) {
@@ -82,18 +164,24 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
         description: product.description || "",
         imagesText: product.images?.join("\n") || "",
         status: product.status || "DRAFT",
-        scheduledPublishAt: product.scheduledPublishAt
-          ? new Date(product.scheduledPublishAt).toISOString().slice(0, 16)
-          : "",
+        scheduledPublishAt: toInputDateTime(product.scheduledPublishAt),
         priceAmount: "",
         priceCurrency: site?.currency || "",
         stockToAdd: "0",
       });
       setSelectedCategories(product.categoryIds || []);
-      setFilters(
+      setFilterAssignments(
         product.filters && product.filters.length > 0
-          ? product.filters.map((f) => ({ key: f.key, value: f.value }))
-          : [{ key: "", value: "" }]
+          ? product.filters.map((filter) => ({
+              filterId: filter.filterId,
+              textValue: filter.textValue ?? "",
+              numericValue: filter.numericValue != null ? String(filter.numericValue) : "",
+              minValue: filter.minValue != null ? String(filter.minValue) : "",
+              maxValue: filter.maxValue != null ? String(filter.maxValue) : "",
+              startAt: toInputDateTime(filter.startAt),
+              endAt: toInputDateTime(filter.endAt),
+            }))
+          : [createEmptyFilterAssignment()]
       );
     }
   }, [product, site?.currency]);
@@ -124,25 +212,252 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
       .filter((line) => !!line);
   }, [formState.imagesText]);
 
-  const sanitizedFilters: ProductFilterRequest[] = useMemo(() => {
-    return filters
-      .filter((filter) => filter.key.trim() && filter.value.trim())
-      .map((filter) => ({
-        key: filter.key.trim(),
-        value: filter.value.trim(),
-      }));
-  }, [filters]);
+  const sanitizedFilterAssignments: ProductFilterAssignmentRequest[] = useMemo(() => {
+    return filterAssignments
+      .filter((assignment) => assignment.filterId)
+      .map((assignment) => {
+        const payload: ProductFilterAssignmentRequest = {
+          filterId: assignment.filterId,
+        };
 
-  const handleFilterChange = (index: number, field: keyof FilterField, value: string) => {
-    setFilters((prev) => prev.map((filter, idx) => (idx === index ? { ...filter, [field]: value } : filter)));
+        if (assignment.textValue.trim()) {
+          payload.textValue = assignment.textValue.trim();
+        }
+        const numericValue = parseNumberOrUndefined(assignment.numericValue);
+        if (numericValue !== undefined) {
+          payload.numericValue = numericValue;
+        }
+        const minValue = parseNumberOrUndefined(assignment.minValue);
+        if (minValue !== undefined) {
+          payload.minValue = minValue;
+        }
+        const maxValue = parseNumberOrUndefined(assignment.maxValue);
+        if (maxValue !== undefined) {
+          payload.maxValue = maxValue;
+        }
+        const startAt = toISOStringIfValid(assignment.startAt);
+        if (startAt) {
+          payload.startAt = startAt;
+        }
+        const endAt = toISOStringIfValid(assignment.endAt);
+        if (endAt) {
+          payload.endAt = endAt;
+        }
+
+        return payload;
+      })
+      .filter((payload) => {
+        const { textValue, numericValue, minValue, maxValue, startAt, endAt } = payload;
+        return Boolean(textValue ?? numericValue ?? minValue ?? maxValue ?? startAt ?? endAt);
+      });
+  }, [filterAssignments]);
+
+  const handleFilterAssignmentChange = (index: number, field: keyof FilterAssignmentField, value: string) => {
+    setFilterAssignments((prev) =>
+      prev.map((assignment, idx) => (idx === index ? { ...assignment, [field]: value } : assignment)),
+    );
   };
 
-  const addFilterRow = () => {
-    setFilters((prev) => [...prev, { key: "", value: "" }]);
+  const handleFilterSelection = (index: number, filterId: string) => {
+    setFilterAssignments((prev) =>
+      prev.map((assignment, idx) => (idx === index ? createEmptyFilterAssignment(filterId) : assignment)),
+    );
   };
 
-  const removeFilterRow = (index: number) => {
-    setFilters((prev) => prev.filter((_, idx) => idx !== index));
+  const handleNewFilterTypeChange = (type: FilterType) => {
+    setNewFilterForm((prev) => ({
+      ...prev,
+      type,
+      valuesText: type === "CATEGORICAL" ? prev.valuesText : "",
+      unit: type === "QUANTITATIVE" ? prev.unit : "",
+      minBound: type === "QUANTITATIVE" ? prev.minBound : "",
+      maxBound: type === "QUANTITATIVE" ? prev.maxBound : "",
+    }));
+  };
+
+  const addFilterAssignmentRow = () => {
+    setFilterAssignments((prev) => [...prev, createEmptyFilterAssignment()]);
+  };
+
+  const removeFilterAssignmentRow = (index: number) => {
+    setFilterAssignments((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const renderFilterValueFields = (
+    definition: FilterResponse,
+    assignment: FilterAssignmentField,
+    index: number,
+  ) => {
+    switch (definition.type) {
+      case "CATEGORICAL": {
+        const hasPredefinedValues = (definition.values?.length ?? 0) > 0;
+        return (
+          <div className="space-y-2">
+            <Label>Valeur</Label>
+            {hasPredefinedValues ? (
+              <Select
+                value={assignment.textValue}
+                onValueChange={(value) => handleFilterAssignmentChange(index, "textValue", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez une valeur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {definition.values?.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={assignment.textValue}
+                onChange={(event) => handleFilterAssignmentChange(index, "textValue", event.target.value)}
+                placeholder="Saisissez une valeur"
+              />
+            )}
+          </div>
+        );
+      }
+      case "QUANTITATIVE": {
+        const unitSuffix = definition.unit ? ` (${definition.unit})` : "";
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Valeur{unitSuffix}</Label>
+              <Input
+                type="number"
+                value={assignment.numericValue}
+                onChange={(event) => handleFilterAssignmentChange(index, "numericValue", event.target.value)}
+                placeholder="Ex. 42"
+              />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Minimum</Label>
+                <Input
+                  type="number"
+                  value={assignment.minValue}
+                  onChange={(event) => handleFilterAssignmentChange(index, "minValue", event.target.value)}
+                  placeholder="Min"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Maximum</Label>
+                <Input
+                  type="number"
+                  value={assignment.maxValue}
+                  onChange={(event) => handleFilterAssignmentChange(index, "maxValue", event.target.value)}
+                  placeholder="Max"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Renseignez soit une valeur simple, soit une plage de valeurs.
+            </p>
+          </div>
+        );
+      }
+      case "DATETIME":
+        return (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Début</Label>
+              <Input
+                type="datetime-local"
+                value={assignment.startAt}
+                onChange={(event) => handleFilterAssignmentChange(index, "startAt", event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Fin</Label>
+              <Input
+                type="datetime-local"
+                value={assignment.endAt}
+                onChange={(event) => handleFilterAssignmentChange(index, "endAt", event.target.value)}
+              />
+            </div>
+            <p className="md:col-span-2 text-xs text-muted-foreground">
+              Laissez vide si la fenêtre temporelle ne s&apos;applique pas.
+            </p>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getFilterTypeLabel = (type: FilterType) => {
+    switch (type) {
+      case "CATEGORICAL":
+        return "Catégoriel";
+      case "QUANTITATIVE":
+        return "Quantitatif";
+      case "DATETIME":
+        return "Temporel";
+      default:
+        return type;
+    }
+  };
+
+  const handleCreateFilter = async () => {
+    if (!newFilterForm.key.trim()) {
+      toast.error("La clé du filtre est requise.");
+      return;
+    }
+
+    const payload: CreateFilterRequest = {
+      siteId,
+      key: newFilterForm.key.trim(),
+      type: newFilterForm.type,
+      displayName: newFilterForm.displayName.trim() || undefined,
+    };
+
+    if (newFilterForm.type === "CATEGORICAL") {
+      const values = newFilterForm.valuesText
+        .split("\n")
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      if (values.length === 0) {
+        toast.error("Ajoutez au moins une valeur pour ce filtre catégoriel.");
+        return;
+      }
+
+      payload.values = values;
+    }
+
+    if (newFilterForm.type === "QUANTITATIVE") {
+      if (newFilterForm.unit.trim()) {
+        payload.unit = newFilterForm.unit.trim();
+      }
+      const minBound = parseNumberOrUndefined(newFilterForm.minBound);
+      if (minBound !== undefined) {
+        payload.minBound = minBound;
+      }
+      const maxBound = parseNumberOrUndefined(newFilterForm.maxBound);
+      if (maxBound !== undefined) {
+        payload.maxBound = maxBound;
+      }
+    }
+
+    const created = await createFilter(payload);
+
+    if (created) {
+      toast.success(`Filtre "${created.displayName ?? created.key}" créé.`);
+      setNewFilterForm({ ...INITIAL_NEW_FILTER_FORM });
+      setFilterAssignments((prev) => {
+        const emptyIndex = prev.findIndex((assignment) => !assignment.filterId);
+        if (emptyIndex !== -1) {
+          return prev.map((assignment, idx) =>
+            idx === emptyIndex ? createEmptyFilterAssignment(created.id) : assignment,
+          );
+        }
+        return [...prev, createEmptyFilterAssignment(created.id)];
+      });
+      await refetchFilters();
+    }
   };
 
   const toggleCategory = (categoryId: string) => {
@@ -161,7 +476,11 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
     isCreatingPrice ||
     isUpdatingPrice;
   const canCreateCategory = Boolean(newCategoryName.trim()) && !isCreatingCategory;
-  const isLoading = isLoadingProduct || isLoadingSite || isLoadingCategories;
+  const canCreateFilter =
+    Boolean(newFilterForm.key.trim()) &&
+    (newFilterForm.type !== "CATEGORICAL" || Boolean(newFilterForm.valuesText.trim())) &&
+    !isCreatingFilter;
+  const isLoading = isLoadingProduct || isLoadingSite || isLoadingCategories || isLoadingFilters;
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -192,7 +511,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
           description: formState.description.trim() || undefined,
           images: sanitizedImages,
           categoryIds: selectedCategories,
-          filters: sanitizedFilters,
+          filters: sanitizedFilterAssignments,
         };
 
         const updatedProduct = await updateProduct(productId, updatePayload);
@@ -246,7 +565,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
           scheduledPublishAt: formState.scheduledPublishAt
             ? new Date(formState.scheduledPublishAt).toISOString()
             : undefined,
-          filters: sanitizedFilters,
+          filters: sanitizedFilterAssignments,
         };
 
         const newProduct = await createProduct(payload);
@@ -432,7 +751,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
                   <p className="text-sm text-muted-foreground">Chargement des catégories...</p>
                 ) : categories.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Aucune catégorie n'est disponible pour ce site. Créez-en une depuis le backend pour l'utiliser ici.
+                    Aucune catégorie n'est disponible pour ce site. Utilisez le formulaire ci-dessus pour en créer une.
                   </p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
@@ -458,47 +777,184 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
             <Card>
               <CardHeader>
                 <CardTitle>Filtres personnalisés</CardTitle>
-                <CardDescription>Ajoutez des attributs spécifiques (ex. couleur, matière).</CardDescription>
+                <CardDescription>
+                  Configurez et attribuez des filtres réutilisables (ex. couleur, matière, date).
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {filters.map((filter, index) => (
-                  <div key={`filter-${index}`} className="grid gap-3 md:grid-cols-5">
-                    <div className="md:col-span-2">
-                      <Label htmlFor={`filter-key-${index}`}>Nom</Label>
+              <CardContent className="space-y-6">
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div>
+                    <p className="text-sm font-medium">Créer un filtre pour ce site</p>
+                    <p className="text-xs text-muted-foreground">
+                      Les filtres sont partagés entre tous vos produits et évitent les fautes de frappe.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="filter-key">Clé</Label>
                       <Input
-                        id={`filter-key-${index}`}
-                        value={filter.key}
-                        onChange={(event) => handleFilterChange(index, "key", event.target.value)}
-                        placeholder="Ex. Couleur"
+                        id="filter-key"
+                        value={newFilterForm.key}
+                        onChange={(event) => setNewFilterForm((prev) => ({ ...prev, key: event.target.value }))}
+                        placeholder="Ex. color"
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <Label htmlFor={`filter-value-${index}`}>Valeur</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="filter-display-name">Nom affiché (optionnel)</Label>
                       <Input
-                        id={`filter-value-${index}`}
-                        value={filter.value}
-                        onChange={(event) => handleFilterChange(index, "value", event.target.value)}
-                        placeholder="Ex. Bleu nuit"
+                        id="filter-display-name"
+                        value={newFilterForm.displayName}
+                        onChange={(event) =>
+                          setNewFilterForm((prev) => ({ ...prev, displayName: event.target.value }))
+                        }
+                        placeholder="Couleur"
                       />
                     </div>
-                    <div className="flex items-end">
-                      <Button
-                        variant="ghost"
-                        type="button"
-                        onClick={() => removeFilterRow(index)}
-                        disabled={filters.length === 1}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Supprimer
-                      </Button>
+                    <div className="space-y-2">
+                      <Label>Type</Label>
+                      <Select value={newFilterForm.type} onValueChange={(value) => handleNewFilterTypeChange(value as FilterType)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez un type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CATEGORICAL">Catégoriel</SelectItem>
+                          <SelectItem value="QUANTITATIVE">Quantitatif</SelectItem>
+                          <SelectItem value="DATETIME">Temporel</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
-                ))}
-                <Button type="button" variant="outline" onClick={addFilterRow} className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Ajouter un filtre
-                </Button>
+                  {newFilterForm.type === "CATEGORICAL" && (
+                    <div className="space-y-2">
+                      <Label>Valeurs disponibles</Label>
+                      <Textarea
+                        rows={3}
+                        placeholder={"Bleu\nRouge\nVert"}
+                        value={newFilterForm.valuesText}
+                        onChange={(event) => setNewFilterForm((prev) => ({ ...prev, valuesText: event.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground">Une valeur par ligne.</p>
+                    </div>
+                  )}
+                  {newFilterForm.type === "QUANTITATIVE" && (
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2 md:col-span-1">
+                        <Label>Unité (optionnel)</Label>
+                        <Input
+                          value={newFilterForm.unit}
+                          onChange={(event) => setNewFilterForm((prev) => ({ ...prev, unit: event.target.value }))}
+                          placeholder="cm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Min (optionnel)</Label>
+                        <Input
+                          type="number"
+                          value={newFilterForm.minBound}
+                          onChange={(event) => setNewFilterForm((prev) => ({ ...prev, minBound: event.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max (optionnel)</Label>
+                        <Input
+                          type="number"
+                          value={newFilterForm.maxBound}
+                          onChange={(event) => setNewFilterForm((prev) => ({ ...prev, maxBound: event.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {newFilterForm.type === "DATETIME" && (
+                    <p className="text-xs text-muted-foreground">
+                      Les filtres temporels vous laisseront saisir des fenêtres de disponibilité par produit.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setNewFilterForm({ ...INITIAL_NEW_FILTER_FORM })}
+                      disabled={isCreatingFilter}
+                    >
+                      Réinitialiser
+                    </Button>
+                    <Button type="button" onClick={handleCreateFilter} disabled={!canCreateFilter}>
+                      {isCreatingFilter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Créer le filtre
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Assigner des valeurs au produit</p>
+                  {isLoadingFilters ? (
+                    <p className="text-sm text-muted-foreground">Chargement des filtres...</p>
+                  ) : availableFilters.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Créez un filtre ci-dessus pour l&apos;assigner à ce produit.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {filterAssignments.map((assignment, index) => {
+                        const definition = availableFilters.find((filter) => filter.id === assignment.filterId);
+                        return (
+                          <div key={`filter-${index}`} className="space-y-4 rounded-lg border p-4">
+                            <div className="grid gap-4 md:grid-cols-3">
+                              <div className="space-y-2">
+                                <Label>Filtre</Label>
+                                <Select
+                                  value={assignment.filterId}
+                                  onValueChange={(value) => handleFilterSelection(index, value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez un filtre" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableFilters.map((filter) => (
+                                      <SelectItem key={filter.id} value={filter.id}>
+                                        {filter.displayName ?? filter.key} · {getFilterTypeLabel(filter.type)}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="md:col-span-2">
+                                {definition ? (
+                                  renderFilterValueFields(definition, assignment, index)
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">
+                                    Sélectionnez un filtre pour renseigner une valeur.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                type="button"
+                                onClick={() => removeFilterAssignmentRow(index)}
+                                disabled={filterAssignments.length === 1}
+                                className="text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Supprimer
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addFilterAssignmentRow}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Assigner un filtre
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
