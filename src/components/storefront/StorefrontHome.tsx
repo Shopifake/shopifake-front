@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -13,12 +13,21 @@ import { useStorefrontConfig } from "../../lib/storefront-config";
 import type { StorefrontProductEntry } from "../../types/storefront";
 import type { ProductFilterAssignmentResponse } from "../../types/api/catalogApiTypes";
 
+export type StorefrontFiltersState = {
+  selectedCategory: string;
+  priceRange: [number, number] | null;
+  selectedFilterValues: Record<string, string[]>;
+  sortOption: string;
+};
+
 type StorefrontHomeProps = {
   products: StorefrontProductEntry[];
   isLoading: boolean;
   categories: { name: string; count: number }[];
   onProductClick: (id: string) => void;
   searchQuery: string;
+  filters: StorefrontFiltersState;
+  onFiltersChange: (next: StorefrontFiltersState) => void;
 };
 
 type NormalizedProduct = {
@@ -67,12 +76,28 @@ const normalizeProduct = (entry: StorefrontProductEntry): NormalizedProduct => {
   };
 };
 
-export function StorefrontHome({ products, isLoading, categories, onProductClick, searchQuery }: StorefrontHomeProps) {
+export function StorefrontHome({
+  products,
+  isLoading,
+  categories,
+  onProductClick,
+  searchQuery,
+  filters,
+  onFiltersChange,
+}: StorefrontHomeProps) {
   const { home, theme, branding } = useStorefrontConfig();
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
-  const [selectedFilterValues, setSelectedFilterValues] = useState<Record<string, string[]>>({});
-  const [sortOption, setSortOption] = useState<string>("featured");
+  const updateFilters = useCallback(
+    (partial: Partial<StorefrontFiltersState>) => {
+      onFiltersChange({
+        selectedCategory: filters.selectedCategory,
+        priceRange: filters.priceRange,
+        selectedFilterValues: filters.selectedFilterValues,
+        sortOption: filters.sortOption,
+        ...partial,
+      });
+    },
+    [filters, onFiltersChange],
+  );
 
   const normalizedProducts = useMemo(
     () =>
@@ -133,10 +158,6 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
     return result;
   }, [normalizedProducts]);
 
-  useEffect(() => {
-    setSelectedFilterValues({});
-  }, [selectedCategory]);
-
   const priceBounds = useMemo(() => {
     const values = normalizedProducts
       .map((product) => product.priceAmount)
@@ -155,8 +176,21 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
   }, [normalizedProducts]);
 
   useEffect(() => {
-    setPriceRange(priceBounds);
-  }, [priceBounds]);
+    const currentRange = filters.priceRange;
+    if (!currentRange) {
+      updateFilters({ priceRange: priceBounds });
+      return;
+    }
+    const [rangeMin, rangeMax] = currentRange;
+    const [boundsMin, boundsMax] = priceBounds;
+    const clampedMin = Math.max(rangeMin, boundsMin);
+    const clampedMax = Math.min(rangeMax, boundsMax);
+    if (clampedMin !== rangeMin || clampedMax !== rangeMax) {
+      updateFilters({ priceRange: [clampedMin, clampedMax] });
+    }
+  }, [priceBounds, filters.priceRange, updateFilters]);
+
+  const activePriceRange = filters.priceRange ?? priceBounds;
 
   const allProductsCount = normalizedProducts.length;
   const categoriesWithAll = [{ name: "all", count: allProductsCount }, ...categoryOptions];
@@ -166,11 +200,11 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
     const matchesSearch =
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.categories.includes(selectedCategory);
+    const matchesCategory = filters.selectedCategory === "all" || product.categories.includes(filters.selectedCategory);
     const matchesPrice =
       product.priceAmount === undefined ||
-      (product.priceAmount >= priceRange[0] && product.priceAmount <= priceRange[1]);
-    const filterEntries = Object.entries(selectedFilterValues).filter(([, values]) => values.length > 0);
+      (product.priceAmount >= activePriceRange[0] && product.priceAmount <= activePriceRange[1]);
+    const filterEntries = Object.entries(filters.selectedFilterValues).filter(([, values]) => values.length > 0);
     const matchesFilters =
       filterEntries.length === 0 ||
       filterEntries.every(([filterKey, values]) => {
@@ -186,7 +220,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
 
   const sortedProducts = useMemo(() => {
     const productsToSort = [...filteredProducts];
-    switch (sortOption) {
+    switch (filters.sortOption) {
       case "price-low":
         productsToSort.sort((a, b) => {
           const priceA = a.priceAmount ?? Number.POSITIVE_INFINITY;
@@ -208,20 +242,25 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
         break;
     }
     return productsToSort;
-  }, [filteredProducts, sortOption]);
+  }, [filteredProducts, filters.sortOption]);
 
   const toggleFilterValue = (filterKey: string, value: string) => {
-    setSelectedFilterValues((prev) => {
-      const currentValues = prev[filterKey] ?? [];
-      const exists = currentValues.includes(value);
-      const nextValues = exists ? currentValues.filter((entry) => entry !== value) : [...currentValues, value];
-      const nextState = { ...prev };
-      if (nextValues.length === 0) {
-        delete nextState[filterKey];
-      } else {
-        nextState[filterKey] = nextValues;
-      }
-      return nextState;
+    const currentValues = filters.selectedFilterValues[filterKey] ?? [];
+    const exists = currentValues.includes(value);
+    const nextValues = exists ? currentValues.filter((entry) => entry !== value) : [...currentValues, value];
+    const nextState = { ...filters.selectedFilterValues };
+    if (nextValues.length === 0) {
+      delete nextState[filterKey];
+    } else {
+      nextState[filterKey] = nextValues;
+    }
+    updateFilters({ selectedFilterValues: nextState });
+  };
+
+  const handleSelectCategory = (category: string) => {
+    updateFilters({
+      selectedCategory: category,
+      selectedFilterValues: {},
     });
   };
 
@@ -231,7 +270,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
         <h3 className="mb-4">Categories</h3>
         <div className="space-y-2">
           {categoriesWithAll.map((cat) => {
-            const isSelected = selectedCategory === cat.name;
+            const isSelected = filters.selectedCategory === cat.name;
             return (
               <button
                 key={cat.name}
@@ -240,7 +279,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
                   "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition hover:border-primary",
                   isSelected ? "border-primary bg-primary/5 text-primary" : "",
                 )}
-                onClick={() => setSelectedCategory(cat.name)}
+                onClick={() => handleSelectCategory(cat.name)}
               >
                 <span>{cat.name === "all" ? "All Products" : cat.name}</span>
                 <span className="text-xs text-muted-foreground">{cat.count ?? 0}</span>
@@ -253,19 +292,26 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
       <div>
         <h3 className="mb-4">Price Range</h3>
         <div className="space-y-4">
-          <Slider value={priceRange} onValueChange={setPriceRange} min={priceBounds[0]} max={priceBounds[1]} step={1} className="w-full" />
+          <Slider
+            value={activePriceRange}
+            onValueChange={(value) => updateFilters({ priceRange: value as [number, number] })}
+            min={priceBounds[0]}
+            max={priceBounds[1]}
+            step={1}
+            className="w-full"
+          />
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>${priceRange[0]}</span>
-            <span>${priceRange[1]}</span>
+            <span>${activePriceRange[0]}</span>
+            <span>${activePriceRange[1]}</span>
           </div>
         </div>
       </div>
 
-      {selectedCategory !== "all" && (
+      {filters.selectedCategory !== "all" && (
         <div>
           <h3 className="mb-4">Filters</h3>
           {(() => {
-            const facets = categoryFilterFacets.get(selectedCategory);
+            const facets = categoryFilterFacets.get(filters.selectedCategory);
             if (!facets || facets.size === 0) {
               return <p className="text-sm text-muted-foreground">Aucun filtre disponible pour cette catégorie.</p>;
             }
@@ -276,7 +322,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
                     <p className="text-sm font-medium">{facet.displayName}</p>
                     <div className="space-y-2">
                       {Array.from(facet.values.entries()).map(([value, count]) => {
-                        const selectedValues = selectedFilterValues[filterKey] ?? [];
+                        const selectedValues = filters.selectedFilterValues[filterKey] ?? [];
                         const isChecked = selectedValues.includes(value);
                         return (
                           <label key={value} className="flex items-center justify-between gap-2 text-sm">
@@ -352,7 +398,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
 
           <div className="flex-1">
             <div className="mb-6 flex gap-4 justify-end">
-              <Select value={sortOption} onValueChange={setSortOption}>
+              <Select value={filters.sortOption} onValueChange={(value) => updateFilters({ sortOption: value })}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>

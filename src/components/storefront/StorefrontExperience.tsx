@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Toaster } from "../ui/sonner";
 import { StorefrontConfigProvider, type StorefrontConfig } from "../../lib/storefront-config";
 import { StorefrontHeader } from "./StorefrontHeader";
-import { StorefrontHome } from "./StorefrontHome";
+import { StorefrontHome, type StorefrontFiltersState } from "./StorefrontHome";
 import { ProductDetail } from "./ProductDetail";
 import { Cart } from "./Cart";
 import { Checkout } from "./Checkout";
@@ -52,12 +52,20 @@ const isPublished = (entry: StorefrontProductEntry) => {
   return entry.product.status.toLowerCase() === "published";
 };
 
+const DEFAULT_FILTERS_STATE: StorefrontFiltersState = {
+  selectedCategory: "all",
+  priceRange: null,
+  selectedFilterValues: {},
+  sortOption: "featured",
+};
+
 export function StorefrontExperience({ config, onReturnToMain, isLiveStorefront = false }: StorefrontExperienceProps) {
   const [view, setView] = useState<StorefrontView>("home");
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [orderId, setOrderId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [productFilters, setProductFilters] = useState<StorefrontFiltersState>(DEFAULT_FILTERS_STATE);
 
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -242,6 +250,8 @@ export function StorefrontExperience({ config, onReturnToMain, isLiveStorefront 
             searchQuery={searchQuery}
             onProductClick={handleProductClick}
             categories={categoryStats}
+            filters={productFilters}
+            onFiltersChange={setProductFilters}
           />
         )}
 
