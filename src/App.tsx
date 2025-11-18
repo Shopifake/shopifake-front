@@ -19,6 +19,7 @@ import { SiteSettings } from "./components/owner/SiteSettings";
 import { AuditLog } from "./components/owner/AuditLog";
 import { Settings } from "./components/owner/Settings";
 import { SiteCreation } from "./components/owner/SiteCreation";
+import { SiteConfigEditor } from "./components/owner/SiteConfigEditor";
 import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
 import { OwnerLogin } from "./components/owner/OwnerLogin";
 import { OwnerSignup } from "./components/owner/OwnerSignup";
@@ -27,15 +28,28 @@ import { buildStorefrontConfigFromDraft, demoSiteDraft, type SiteDraft } from ".
 import { getSubdomain } from "./lib/subdomain-utils";
 import { useGetSiteBySlug } from "./hooks/sites";
 import { buildStorefrontConfigFromSiteConfig } from "./lib/site-config-to-storefront";
-import type { SiteConfig } from "./types/api/sitesApiTypes";
+import type { SiteConfig, SiteStatus } from "./types/api/sitesApiTypes";
+import { SubdomainUnavailable } from "./components/SubdomainUnavailable";
 
 // Storefront Components
 import { StorefrontExperience } from "./components/storefront/StorefrontExperience";
 import { SubdomainNotFound } from "./components/SubdomainNotFound";
 
-type AppMode = "landing" | "owner" | "storefront" | "preview" | "subdomain-not-found";
+type AppMode = "landing" | "owner" | "storefront" | "preview" | "subdomain-not-found" | "subdomain-unavailable";
 type OwnerView = "login" | "signup" | "dashboard";
-type OwnerPage = "overview" | "products" | "product-form" | "stock" | "users" | "sites" | "site-management" | "site-settings" | "site-create" | "audit" | "settings";
+type OwnerPage =
+  | "overview"
+  | "products"
+  | "product-form"
+  | "stock"
+  | "users"
+  | "sites"
+  | "site-management"
+  | "site-settings"
+  | "site-config"
+  | "site-create"
+  | "audit"
+  | "settings";
 
 export default function App() {
   const [mode, setMode] = useState<AppMode>("landing");
@@ -46,6 +60,7 @@ export default function App() {
   const [storefrontConfig, setStorefrontConfig] = useState<StorefrontConfig>(mockStorefrontConfig);
   const [previewDraft, setPreviewDraft] = useState<SiteDraft | null>(null);
   const [subdomain, setSubdomain] = useState<string | null>(null);
+  const [subdomainUnavailableStatus, setSubdomainUnavailableStatus] = useState<SiteStatus | null>(null);
 
   const heroContainerRef = useRef<HTMLDivElement | null>(null);
   const heroProximityContainerRef = heroContainerRef as unknown as RefObject<HTMLElement | null>;
@@ -67,6 +82,7 @@ export default function App() {
     }
 
     const detectedSubdomain = getSubdomain();
+    console.log("detectedSubdomain", detectedSubdomain);
     setSubdomain(detectedSubdomain);
 
     // If subdomain is detected, we'll handle it in the subdomainSite effect
@@ -75,11 +91,13 @@ export default function App() {
   // Handle subdomain site loading
   useEffect(() => {
     if (subdomain && subdomainSite) {
-      // Check if site is active
+      // Check if site is active, unless we've enabled draft storefront preview (e.g. local dev)
       if (subdomainSite.status !== "ACTIVE") {
-        setMode("subdomain-not-found");
+        setSubdomainUnavailableStatus(subdomainSite.status);
+        setMode("subdomain-unavailable");
         return;
       }
+      setSubdomainUnavailableStatus(null);
 
       // Parse site config
       let siteConfig: SiteConfig;
@@ -96,6 +114,7 @@ export default function App() {
       setStorefrontConfig(config);
       setMode("storefront");
     } else if (subdomain && !isLoadingSubdomainSite && !subdomainSite) {
+      setSubdomainUnavailableStatus(null);
       // Subdomain detected but site not found
       setMode("subdomain-not-found");
     }
@@ -510,6 +529,12 @@ export default function App() {
               onSiteDeleted={handleBackToSites}
             />
           )}
+          {ownerPage === "site-config" && selectedSiteId && (
+            <SiteConfigEditor
+              siteId={selectedSiteId}
+              onBack={handleBackToSiteManagement}
+            />
+          )}
           {ownerPage === "products" && selectedSiteId && (
             <ProductList
               onAddProduct={handleAddProduct}
@@ -616,6 +641,15 @@ export default function App() {
       <>
         <Toaster />
         <SubdomainNotFound subdomain={subdomain} />
+      </>
+    );
+  }
+
+  if (mode === "subdomain-unavailable" && subdomain && subdomainUnavailableStatus) {
+    return (
+      <>
+        <Toaster />
+        <SubdomainUnavailable subdomain={subdomain} status={subdomainUnavailableStatus} />
       </>
     );
   }
