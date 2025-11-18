@@ -10,6 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import {
   useCreateProduct,
   useUpdateProduct,
   useGetProduct,
@@ -128,6 +136,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newFilterForm, setNewFilterForm] = useState<NewFilterFormState>(INITIAL_NEW_FILTER_FORM);
+  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
 
   const { site, isLoading: isLoadingSite } = useGetSiteById(siteId);
   const { categories, isLoading: isLoadingCategories, refetch: refetchCategories } = useListCategories(siteId);
@@ -198,13 +207,16 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
   }, [activePrice]);
 
   useEffect(() => {
+    if (!isFilterDialogOpen) {
+      return;
+    }
     if (categories.length > 0 && !newFilterForm.categoryId) {
       setNewFilterForm((prev) => ({
         ...prev,
         categoryId: prev.categoryId || categories[0].id,
       }));
     }
-  }, [categories, newFilterForm.categoryId]);
+  }, [categories, isFilterDialogOpen, newFilterForm.categoryId]);
 
   // Load inventory when editing
   useEffect(() => {
@@ -470,6 +482,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
         ...INITIAL_NEW_FILTER_FORM,
         categoryId: newFilterForm.categoryId,
       });
+      setIsFilterDialogOpen(false);
       setFilterAssignments((prev) => {
         const emptyIndex = prev.findIndex((assignment) => !assignment.filterId);
         if (emptyIndex !== -1) {
@@ -557,7 +570,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
           });
         }
 
-        // In edit mode, inventory adjustments are done via the Adjust Inventory button in ProductList
+        // In edit mode, inventory adjustments are done from the Stock Management section
         // No inventory adjustment here
 
         toast.success("Produit mis à jour avec succès.");
@@ -795,132 +808,155 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4 rounded-lg border p-4">
+                <div className="flex items-center justify-between rounded-lg border p-4">
                   <div>
                     <p className="text-sm font-medium">Créer un filtre pour ce site</p>
                     <p className="text-xs text-muted-foreground">
                       Les filtres sont partagés entre tous vos produits et évitent les fautes de frappe.
                     </p>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="filter-key">Clé</Label>
-                      <Input
-                        id="filter-key"
-                        value={newFilterForm.key}
-                        onChange={(event) => setNewFilterForm((prev) => ({ ...prev, key: event.target.value }))}
-                        placeholder="Ex. color"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="filter-display-name">Nom affiché (optionnel)</Label>
-                      <Input
-                        id="filter-display-name"
-                        value={newFilterForm.displayName}
-                        onChange={(event) =>
-                          setNewFilterForm((prev) => ({ ...prev, displayName: event.target.value }))
-                        }
-                        placeholder="Couleur"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Type</Label>
-                      <Select value={newFilterForm.type} onValueChange={(value) => handleNewFilterTypeChange(value as FilterType)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CATEGORICAL">Catégoriel</SelectItem>
-                          <SelectItem value="QUANTITATIVE">Quantitatif</SelectItem>
-                          <SelectItem value="DATETIME">Temporel</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Catégorie associée</Label>
-                    {categories.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Créez d&apos;abord une catégorie pour pouvoir ajouter un filtre.
-                      </p>
-                    ) : (
-                      <Select
-                        value={newFilterForm.categoryId}
-                        onValueChange={(value) => setNewFilterForm((prev) => ({ ...prev, categoryId: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez une catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                  {newFilterForm.type === "CATEGORICAL" && (
-                    <div className="space-y-2">
-                      <Label>Valeurs disponibles</Label>
-                      <Textarea
-                        rows={3}
-                        placeholder={"Bleu\nRouge\nVert"}
-                        value={newFilterForm.valuesText}
-                        onChange={(event) => setNewFilterForm((prev) => ({ ...prev, valuesText: event.target.value }))}
-                      />
-                      <p className="text-xs text-muted-foreground">Une valeur par ligne.</p>
-                    </div>
-                  )}
-                  {newFilterForm.type === "QUANTITATIVE" && (
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div className="space-y-2 md:col-span-1">
-                        <Label>Unité (optionnel)</Label>
-                        <Input
-                          value={newFilterForm.unit}
-                          onChange={(event) => setNewFilterForm((prev) => ({ ...prev, unit: event.target.value }))}
-                          placeholder="cm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Min (optionnel)</Label>
-                        <Input
-                          type="number"
-                          value={newFilterForm.minBound}
-                          onChange={(event) => setNewFilterForm((prev) => ({ ...prev, minBound: event.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Max (optionnel)</Label>
-                        <Input
-                          type="number"
-                          value={newFilterForm.maxBound}
-                          onChange={(event) => setNewFilterForm((prev) => ({ ...prev, maxBound: event.target.value }))}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {newFilterForm.type === "DATETIME" && (
-                    <p className="text-xs text-muted-foreground">
-                      Les filtres temporels vous laisseront saisir des fenêtres de disponibilité par produit.
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setNewFilterForm({ ...INITIAL_NEW_FILTER_FORM })}
-                      disabled={isCreatingFilter}
-                    >
-                      Réinitialiser
-                    </Button>
-                    <Button type="button" onClick={handleCreateFilter} disabled={!canCreateFilter}>
-                      {isCreatingFilter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Créer le filtre
-                    </Button>
-                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (categories.length === 0) {
+                        toast.error("Créez une catégorie avant d'ajouter un filtre.");
+                        return;
+                      }
+                      setIsFilterDialogOpen(true);
+                    }}
+                    disabled={categories.length === 0}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nouveau filtre
+                  </Button>
                 </div>
+                <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Créer un filtre</DialogTitle>
+                      <DialogDescription>Associez des filtres réutilisables à vos catégories de produits.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="filter-key">Clé</Label>
+                          <Input
+                            id="filter-key"
+                            value={newFilterForm.key}
+                            onChange={(event) => setNewFilterForm((prev) => ({ ...prev, key: event.target.value }))}
+                            placeholder="Ex. color"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="filter-display-name">Nom affiché (optionnel)</Label>
+                          <Input
+                            id="filter-display-name"
+                            value={newFilterForm.displayName}
+                            onChange={(event) =>
+                              setNewFilterForm((prev) => ({ ...prev, displayName: event.target.value }))
+                            }
+                            placeholder="Couleur"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select value={newFilterForm.type} onValueChange={(value) => handleNewFilterTypeChange(value as FilterType)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionnez un type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CATEGORICAL">Catégoriel</SelectItem>
+                              <SelectItem value="QUANTITATIVE">Quantitatif</SelectItem>
+                              <SelectItem value="DATETIME">Temporel</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Catégorie associée</Label>
+                          <Select
+                            value={newFilterForm.categoryId}
+                            onValueChange={(value) => setNewFilterForm((prev) => ({ ...prev, categoryId: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Sélectionnez une catégorie" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      {newFilterForm.type === "CATEGORICAL" && (
+                        <div className="space-y-2">
+                          <Label>Valeurs disponibles</Label>
+                          <Textarea
+                            rows={3}
+                            placeholder={"Bleu\nRouge\nVert"}
+                            value={newFilterForm.valuesText}
+                            onChange={(event) => setNewFilterForm((prev) => ({ ...prev, valuesText: event.target.value }))}
+                          />
+                          <p className="text-xs text-muted-foreground">Une valeur par ligne.</p>
+                        </div>
+                      )}
+                      {newFilterForm.type === "QUANTITATIVE" && (
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="space-y-2 md:col-span-1">
+                            <Label>Unité (optionnel)</Label>
+                            <Input
+                              value={newFilterForm.unit}
+                              onChange={(event) => setNewFilterForm((prev) => ({ ...prev, unit: event.target.value }))}
+                              placeholder="cm"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Min (optionnel)</Label>
+                            <Input
+                              type="number"
+                              value={newFilterForm.minBound}
+                              onChange={(event) => setNewFilterForm((prev) => ({ ...prev, minBound: event.target.value }))}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Max (optionnel)</Label>
+                            <Input
+                              type="number"
+                              value={newFilterForm.maxBound}
+                              onChange={(event) => setNewFilterForm((prev) => ({ ...prev, maxBound: event.target.value }))}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {newFilterForm.type === "DATETIME" && (
+                        <p className="text-xs text-muted-foreground">
+                          Les filtres temporels vous laisseront saisir des fenêtres de disponibilité par produit.
+                        </p>
+                      )}
+                    </div>
+                    <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setNewFilterForm({ ...INITIAL_NEW_FILTER_FORM })}
+                        disabled={isCreatingFilter}
+                      >
+                        Réinitialiser
+                      </Button>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" onClick={() => setIsFilterDialogOpen(false)}>
+                          Annuler
+                        </Button>
+                        <Button type="button" onClick={handleCreateFilter} disabled={!canCreateFilter}>
+                          {isCreatingFilter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Créer le filtre
+                        </Button>
+                      </div>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Assigner des valeurs au produit</p>
