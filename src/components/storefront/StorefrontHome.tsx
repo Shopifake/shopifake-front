@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { cn } from "../ui/utils";
 import { useStorefrontConfig } from "../../lib/storefront-config";
 import type { StorefrontProductEntry } from "../../types/storefront";
+import type { ProductFilterAssignmentResponse } from "../../types/api/catalogApiTypes";
 
 type StorefrontHomeProps = {
   products: StorefrontProductEntry[];
@@ -30,6 +31,8 @@ type NormalizedProduct = {
   priceCurrency?: string;
   stock?: number;
   status: string;
+  filters: ProductFilterAssignmentResponse[];
+  createdAt: number;
 };
 
 const normalizeProduct = (entry: StorefrontProductEntry): NormalizedProduct => {
@@ -44,6 +47,8 @@ const normalizeProduct = (entry: StorefrontProductEntry): NormalizedProduct => {
       priceCurrency: entry.price?.currency,
       stock: entry.inventory?.availableQuantity ?? undefined,
       status: entry.product.status.toLowerCase(),
+      filters: entry.product.filters ?? [],
+      createdAt: entry.product.createdAt ? new Date(entry.product.createdAt).getTime() : 0,
     };
   }
 
@@ -57,6 +62,8 @@ const normalizeProduct = (entry: StorefrontProductEntry): NormalizedProduct => {
     priceCurrency: "USD",
     stock: entry.product.stock,
     status: entry.product.status.toLowerCase(),
+    filters: [],
+    createdAt: 0,
   };
 };
 
@@ -64,6 +71,8 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
   const { home, theme, branding } = useStorefrontConfig();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
+  const [selectedFilterValues, setSelectedFilterValues] = useState<Record<string, string[]>>({});
+  const [sortOption, setSortOption] = useState<string>("featured");
 
   const normalizedProducts = useMemo(
     () =>
@@ -73,14 +82,60 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
     [products],
   );
 
-  const derivedCategories = useMemo(() => {
+  const categoryOptions = useMemo(() => {
     if (categories.length > 0) {
-      return categories.map((category) => category.name);
+      return categories;
     }
-    const unique = new Set<string>();
-    normalizedProducts.forEach((product) => product.categories.forEach((category) => unique.add(category)));
-    return Array.from(unique);
+    const counts = new Map<string, number>();
+    normalizedProducts.forEach((product) => {
+      product.categories.forEach((category) => {
+        counts.set(category, (counts.get(category) ?? 0) + 1);
+      });
+    });
+    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
   }, [categories, normalizedProducts]);
+
+  const categoryFilterFacets = useMemo(() => {
+    const result = new Map<
+      string,
+      Map<
+        string,
+        {
+          displayName: string;
+          values: Map<string, number>;
+        }
+      >
+    >();
+
+    normalizedProducts.forEach((product) => {
+      product.categories.forEach((category) => {
+        if (!result.has(category)) {
+          result.set(category, new Map());
+        }
+        const filterMap = result.get(category)!;
+        product.filters.forEach((filter) => {
+          if (!filter.textValue) {
+            return;
+          }
+          const key = filter.key;
+          if (!filterMap.has(key)) {
+            filterMap.set(key, {
+              displayName: filter.displayName ?? key,
+              values: new Map(),
+            });
+          }
+          const facet = filterMap.get(key)!;
+          facet.values.set(filter.textValue, (facet.values.get(filter.textValue) ?? 0) + 1);
+        });
+      });
+    });
+
+    return result;
+  }, [normalizedProducts]);
+
+  useEffect(() => {
+    setSelectedFilterValues({});
+  }, [selectedCategory]);
 
   const priceBounds = useMemo(() => {
     const values = normalizedProducts
@@ -103,7 +158,8 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
     setPriceRange(priceBounds);
   }, [priceBounds]);
 
-  const categoriesWithAll = ["all", ...derivedCategories];
+  const allProductsCount = normalizedProducts.length;
+  const categoriesWithAll = [{ name: "all", count: allProductsCount }, ...categoryOptions];
   const HeroIcon = home.hero.Icon;
 
   const filteredProducts = normalizedProducts.filter((product) => {
@@ -114,26 +170,83 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
     const matchesPrice =
       product.priceAmount === undefined ||
       (product.priceAmount >= priceRange[0] && product.priceAmount <= priceRange[1]);
-    return matchesSearch && matchesCategory && matchesPrice;
+    const filterEntries = Object.entries(selectedFilterValues).filter(([, values]) => values.length > 0);
+    const matchesFilters =
+      filterEntries.length === 0 ||
+      filterEntries.every(([filterKey, values]) => {
+        const productFilter = product.filters.find((filter) => filter.key === filterKey);
+        if (!productFilter?.textValue) {
+          return false;
+        }
+        return values.includes(productFilter.textValue);
+      });
+
+    return matchesSearch && matchesCategory && matchesPrice && matchesFilters;
   });
+
+  const sortedProducts = useMemo(() => {
+    const productsToSort = [...filteredProducts];
+    switch (sortOption) {
+      case "price-low":
+        productsToSort.sort((a, b) => {
+          const priceA = a.priceAmount ?? Number.POSITIVE_INFINITY;
+          const priceB = b.priceAmount ?? Number.POSITIVE_INFINITY;
+          return priceA - priceB;
+        });
+        break;
+      case "price-high":
+        productsToSort.sort((a, b) => {
+          const priceA = a.priceAmount ?? 0;
+          const priceB = b.priceAmount ?? 0;
+          return priceB - priceA;
+        });
+        break;
+      case "newest":
+        productsToSort.sort((a, b) => b.createdAt - a.createdAt);
+        break;
+      default:
+        break;
+    }
+    return productsToSort;
+  }, [filteredProducts, sortOption]);
+
+  const toggleFilterValue = (filterKey: string, value: string) => {
+    setSelectedFilterValues((prev) => {
+      const currentValues = prev[filterKey] ?? [];
+      const exists = currentValues.includes(value);
+      const nextValues = exists ? currentValues.filter((entry) => entry !== value) : [...currentValues, value];
+      const nextState = { ...prev };
+      if (nextValues.length === 0) {
+        delete nextState[filterKey];
+      } else {
+        nextState[filterKey] = nextValues;
+      }
+      return nextState;
+    });
+  };
 
   const FilterPanel = () => (
     <div className="space-y-6">
       <div>
         <h3 className="mb-4">Categories</h3>
         <div className="space-y-2">
-          {categoriesWithAll.map((cat) => (
-            <div key={cat} className="flex items-center space-x-2">
-              <Checkbox
-                id={cat}
-                checked={selectedCategory === cat}
-                onCheckedChange={() => setSelectedCategory(cat)}
-              />
-              <Label htmlFor={cat} className="text-sm cursor-pointer">
-                {cat === "all" ? "All Products" : cat}
-              </Label>
-            </div>
-          ))}
+          {categoriesWithAll.map((cat) => {
+            const isSelected = selectedCategory === cat.name;
+            return (
+              <button
+                key={cat.name}
+                type="button"
+                className={cn(
+                  "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition hover:border-primary",
+                  isSelected ? "border-primary bg-primary/5 text-primary" : "",
+                )}
+                onClick={() => setSelectedCategory(cat.name)}
+              >
+                <span>{cat.name === "all" ? "All Products" : cat.name}</span>
+                <span className="text-xs text-muted-foreground">{cat.count ?? 0}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -147,6 +260,45 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
           </div>
         </div>
       </div>
+
+      {selectedCategory !== "all" && (
+        <div>
+          <h3 className="mb-4">Filters</h3>
+          {(() => {
+            const facets = categoryFilterFacets.get(selectedCategory);
+            if (!facets || facets.size === 0) {
+              return <p className="text-sm text-muted-foreground">Aucun filtre disponible pour cette catégorie.</p>;
+            }
+            return (
+              <div className="space-y-4">
+                {Array.from(facets.entries()).map(([filterKey, facet]) => (
+                  <div key={filterKey} className="space-y-3 rounded-lg border p-3">
+                    <p className="text-sm font-medium">{facet.displayName}</p>
+                    <div className="space-y-2">
+                      {Array.from(facet.values.entries()).map(([value, count]) => {
+                        const selectedValues = selectedFilterValues[filterKey] ?? [];
+                        const isChecked = selectedValues.includes(value);
+                        return (
+                          <label key={value} className="flex items-center justify-between gap-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => toggleFilterValue(filterKey, value)}
+                              />
+                              <span>{value}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{count}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 
@@ -200,7 +352,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
 
           <div className="flex-1">
             <div className="mb-6 flex gap-4 justify-end">
-              <Select defaultValue="featured">
+              <Select value={sortOption} onValueChange={setSortOption}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -235,7 +387,7 @@ export function StorefrontHome({ products, isLoading, categories, onProductClick
               <div className="text-center py-12 text-muted-foreground">Loading products...</div>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => {
+              {sortedProducts.map((product) => {
                 const priceLabel =
                   product.priceAmount !== undefined
                     ? `${product.priceAmount.toFixed(2)} ${product.priceCurrency ?? ""}`.trim()

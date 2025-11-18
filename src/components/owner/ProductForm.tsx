@@ -55,6 +55,7 @@ type NewFilterFormState = {
   unit: string;
   minBound: string;
   maxBound: string;
+  categoryId: string;
 };
 
 const createEmptyFilterAssignment = (filterId = ""): FilterAssignmentField => ({
@@ -75,6 +76,7 @@ const INITIAL_NEW_FILTER_FORM: NewFilterFormState = {
   unit: "",
   minBound: "",
   maxBound: "",
+  categoryId: "",
 };
 
 const toInputDateTime = (value?: string) => {
@@ -194,6 +196,15 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
       }));
     }
   }, [activePrice]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !newFilterForm.categoryId) {
+      setNewFilterForm((prev) => ({
+        ...prev,
+        categoryId: prev.categoryId || categories[0].id,
+      }));
+    }
+  }, [categories, newFilterForm.categoryId]);
 
   // Load inventory when editing
   useEffect(() => {
@@ -405,10 +416,21 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
       return;
     }
 
+    if (categories.length === 0) {
+      toast.error("Créez une catégorie avant d'ajouter un filtre.");
+      return;
+    }
+
+    if (!newFilterForm.categoryId) {
+      toast.error("Veuillez sélectionner la catégorie associée à ce filtre.");
+      return;
+    }
+
     const payload: CreateFilterRequest = {
       siteId,
       key: newFilterForm.key.trim(),
       type: newFilterForm.type,
+      categoryId: newFilterForm.categoryId,
       displayName: newFilterForm.displayName.trim() || undefined,
     };
 
@@ -444,7 +466,10 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
 
     if (created) {
       toast.success(`Filtre "${created.displayName ?? created.key}" créé.`);
-      setNewFilterForm({ ...INITIAL_NEW_FILTER_FORM });
+      setNewFilterForm({
+        ...INITIAL_NEW_FILTER_FORM,
+        categoryId: newFilterForm.categoryId,
+      });
       setFilterAssignments((prev) => {
         const emptyIndex = prev.findIndex((assignment) => !assignment.filterId);
         if (emptyIndex !== -1) {
@@ -470,6 +495,8 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
   const canCreateCategory = Boolean(newCategoryName.trim()) && !isCreatingCategory;
   const canCreateFilter =
     Boolean(newFilterForm.key.trim()) &&
+    Boolean(newFilterForm.categoryId) &&
+    categories.length > 0 &&
     (newFilterForm.type !== "CATEGORICAL" || Boolean(newFilterForm.valuesText.trim())) &&
     !isCreatingFilter;
   const isLoading = isLoadingProduct || isLoadingSite || isLoadingCategories || isLoadingFilters;
@@ -809,6 +836,30 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Catégorie associée</Label>
+                    {categories.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Créez d&apos;abord une catégorie pour pouvoir ajouter un filtre.
+                      </p>
+                    ) : (
+                      <Select
+                        value={newFilterForm.categoryId}
+                        onValueChange={(value) => setNewFilterForm((prev) => ({ ...prev, categoryId: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionnez une catégorie" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                   {newFilterForm.type === "CATEGORICAL" && (
                     <div className="space-y-2">

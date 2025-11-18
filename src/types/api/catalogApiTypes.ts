@@ -6,6 +6,7 @@ export interface CreateFilterRequest {
   siteId: string;
   key: string;
   type: FilterType;
+  categoryId: string;
   displayName?: string;
   values?: string[];
   unit?: string;
@@ -16,6 +17,7 @@ export interface CreateFilterRequest {
 export interface FilterResponse {
   id: string;
   siteId: string;
+  categoryId: string;
   key: string;
   type: FilterType;
   displayName?: string;
