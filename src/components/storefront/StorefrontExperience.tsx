@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { Toaster } from "../ui/sonner";
 import { StorefrontConfigProvider, type StorefrontConfig } from "../../lib/storefront-config";
@@ -11,6 +11,9 @@ import { OrderConfirmation } from "./OrderConfirmation";
 import { Categories } from "./Categories";
 import { About } from "./About";
 import { Account } from "./Account";
+import { mockProducts } from "../../lib/mock-data";
+import { useStorefrontCatalog } from "../../hooks/storefront/useStorefrontCatalog";
+import type { StorefrontProductEntry } from "../../types/storefront";
 
 type StorefrontView =
   | "home"
@@ -30,9 +33,26 @@ interface CartItem {
 interface StorefrontExperienceProps {
   config: StorefrontConfig;
   onReturnToMain?: () => void;
+  isLiveStorefront?: boolean;
 }
 
-export function StorefrontExperience({ config, onReturnToMain }: StorefrontExperienceProps) {
+const getEntryCategories = (entry: StorefrontProductEntry) => {
+  if (entry.kind === "live") {
+    return entry.product.categories?.map((category) => category.name).filter(Boolean) ?? [];
+  }
+
+  return entry.product.category ? [entry.product.category] : [];
+};
+
+const isPublished = (entry: StorefrontProductEntry) => {
+  if (entry.kind === "live") {
+    return entry.product.status === "PUBLISHED";
+  }
+
+  return entry.product.status.toLowerCase() === "published";
+};
+
+export function StorefrontExperience({ config, onReturnToMain, isLiveStorefront = false }: StorefrontExperienceProps) {
   const [view, setView] = useState<StorefrontView>("home");
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -40,6 +60,46 @@ export function StorefrontExperience({ config, onReturnToMain }: StorefrontExper
   const [searchQuery, setSearchQuery] = useState("");
 
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const previousTitle = document.title;
+    const previousFaviconLink = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+    const faviconLink =
+      previousFaviconLink ??
+      (() => {
+        const link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+        return link;
+      })();
+
+    const previousHref = faviconLink.getAttribute("href");
+
+    const nextTitle = config.branding.name || config.home.hero.title || previousTitle;
+    document.title = nextTitle;
+
+    const logoUrl = config.branding.logoUrl;
+    if (logoUrl) {
+      faviconLink.setAttribute("href", logoUrl);
+    }
+
+    return () => {
+      document.title = previousTitle;
+      if (logoUrl) {
+        if (previousHref) {
+          faviconLink.setAttribute("href", previousHref);
+        } else if (!previousFaviconLink) {
+          faviconLink.remove();
+        } else {
+          faviconLink.removeAttribute("href");
+        }
+      }
+    };
+  }, [config.branding.name, config.home.hero.title, config.branding.logoUrl]);
 
   const themeStyle = useMemo(() => {
     const hexToRgba = (hex: string, alpha: number) => {
@@ -113,6 +173,47 @@ export function StorefrontExperience({ config, onReturnToMain }: StorefrontExper
     toast.success("Order placed successfully!");
   };
 
+  const productSiteId = config.home.productSiteId;
+  const canUseLiveData = Boolean(isLiveStorefront && productSiteId && productSiteId !== "preview" && productSiteId !== "site");
+  const { products: liveProducts, isLoading: isLoadingLive } = useStorefrontCatalog(productSiteId, canUseLiveData);
+
+  const catalogEntries: StorefrontProductEntry[] = useMemo(() => {
+    if (canUseLiveData) {
+      return liveProducts;
+    }
+
+    const fallbackSiteId = productSiteId ?? "1";
+    const fallback = mockProducts.filter((product) => product.siteId === fallbackSiteId);
+    const source = fallback.length > 0 ? fallback : mockProducts;
+    const published = source.filter((product) => product.status.toLowerCase() === "published");
+    const list = published.length > 0 ? published : source;
+    return list.map((product) => ({
+      kind: "mock",
+      product,
+    }));
+  }, [canUseLiveData, liveProducts, productSiteId]);
+
+  const categoryStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    catalogEntries.forEach((entry) => {
+      if (!isPublished(entry)) {
+        return;
+      }
+      getEntryCategories(entry).forEach((name) => {
+        counts.set(name, (counts.get(name) ?? 0) + 1);
+      });
+    });
+    return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+  }, [catalogEntries]);
+
+  const categoryDescriptions = useMemo(() => {
+    const map = new Map<string, string>();
+    config.categoriesPage.cards.forEach((card) => {
+      map.set(card.name, card.description);
+    });
+    return map;
+  }, [config.categoriesPage.cards]);
+
   return (
     <StorefrontConfigProvider value={config}>
       <Toaster />
@@ -135,12 +236,19 @@ export function StorefrontExperience({ config, onReturnToMain }: StorefrontExper
         )}
 
         {view === "home" && (
-          <StorefrontHome onProductClick={handleProductClick} searchQuery={searchQuery} />
+          <StorefrontHome
+            products={catalogEntries}
+            isLoading={isLoadingLive && canUseLiveData}
+            searchQuery={searchQuery}
+            onProductClick={handleProductClick}
+            categories={categoryStats}
+          />
         )}
 
         {view === "product-detail" && selectedProductId && (
           <ProductDetail
             productId={selectedProductId}
+            products={catalogEntries}
             onBack={() => setView("home")}
             onAddToCart={handleAddToCart}
           />
@@ -153,11 +261,12 @@ export function StorefrontExperience({ config, onReturnToMain }: StorefrontExper
             onRemove={handleRemoveFromCart}
             onCheckout={handleCheckout}
             onContinueShopping={() => setView("home")}
+            products={catalogEntries}
           />
         )}
 
         {view === "checkout" && (
-          <Checkout items={cartItems} onComplete={handleOrderComplete} />
+          <Checkout items={cartItems} products={catalogEntries} onComplete={handleOrderComplete} />
         )}
 
         {view === "confirmation" && (
@@ -165,7 +274,18 @@ export function StorefrontExperience({ config, onReturnToMain }: StorefrontExper
         )}
 
         {view === "categories" && (
-          <Categories onCategoryClick={() => setView("home")} />
+          <Categories
+            categories={categoryStats}
+            descriptions={categoryDescriptions}
+            isLoading={isLoadingLive && canUseLiveData}
+            onCategoryClick={() => setView("home")}
+            fallbackCards={config.categoriesPage.cards}
+            heading={config.categoriesPage.heading}
+            subheading={config.categoriesPage.subheading}
+            headingClass={config.categoriesPage.headingClass}
+            cardHoverClass={config.categoriesPage.cardHoverClass}
+            countClass={config.categoriesPage.countClass}
+          />
         )}
 
         {view === "about" && <About />}

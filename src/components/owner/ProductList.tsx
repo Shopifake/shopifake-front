@@ -126,6 +126,7 @@ export function ProductList({ onAddProduct, onEditProduct, siteId, onBack }: {
                       product={product}
                       onEdit={() => onEditProduct(product.id)}
                       onDelete={() => setProductToDelete(product.id)}
+                      onStatusChange={refetch}
                     />
                   ))
                 )}

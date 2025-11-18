@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -7,43 +7,122 @@ import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Slider } from "../ui/slider";
 import { SlidersHorizontal } from "lucide-react";
-import { mockProducts } from "../../lib/mock-data";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../ui/sheet";
 import { cn } from "../ui/utils";
 import { useStorefrontConfig } from "../../lib/storefront-config";
+import type { StorefrontProductEntry } from "../../types/storefront";
 
-export function StorefrontHome({ 
-  onProductClick,
-  searchQuery 
-}: { 
+type StorefrontHomeProps = {
+  products: StorefrontProductEntry[];
+  isLoading: boolean;
+  categories: { name: string; count: number }[];
   onProductClick: (id: string) => void;
   searchQuery: string;
-}) {
+};
+
+type NormalizedProduct = {
+  id: string;
+  name: string;
+  description: string;
+  categories: string[];
+  imageUrl?: string;
+  priceAmount?: number;
+  priceCurrency?: string;
+  stock?: number;
+  status: string;
+};
+
+const normalizeProduct = (entry: StorefrontProductEntry): NormalizedProduct => {
+  if (entry.kind === "live") {
+    return {
+      id: entry.product.id,
+      name: entry.product.name,
+      description: entry.product.description ?? "",
+      categories: entry.product.categories?.map((category) => category.name).filter(Boolean) ?? [],
+      imageUrl: entry.product.images?.[0],
+      priceAmount: entry.price?.amount,
+      priceCurrency: entry.price?.currency,
+      stock: entry.inventory?.availableQuantity ?? undefined,
+      status: entry.product.status.toLowerCase(),
+    };
+  }
+
+  return {
+    id: entry.product.id,
+    name: entry.product.name,
+    description: entry.product.description ?? "",
+    categories: entry.product.category ? [entry.product.category] : [],
+    imageUrl: entry.product.imageUrl,
+    priceAmount: entry.product.price,
+    priceCurrency: "USD",
+    stock: entry.product.stock,
+    status: entry.product.status.toLowerCase(),
+  };
+};
+
+export function StorefrontHome({ products, isLoading, categories, onProductClick, searchQuery }: StorefrontHomeProps) {
   const { home, theme, branding } = useStorefrontConfig();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [priceRange, setPriceRange] = useState([0, 100]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]);
 
-  const categories = ["all", ...home.filterCategories];
+  const normalizedProducts = useMemo(
+    () =>
+      products
+        .map(normalizeProduct)
+        .filter((product) => product.status === "published"),
+    [products],
+  );
+
+  const derivedCategories = useMemo(() => {
+    if (categories.length > 0) {
+      return categories.map((category) => category.name);
+    }
+    const unique = new Set<string>();
+    normalizedProducts.forEach((product) => product.categories.forEach((category) => unique.add(category)));
+    return Array.from(unique);
+  }, [categories, normalizedProducts]);
+
+  const priceBounds = useMemo(() => {
+    const values = normalizedProducts
+      .map((product) => product.priceAmount)
+      .filter((value): value is number => typeof value === "number" && !Number.isNaN(value));
+
+    if (values.length === 0) {
+      return [0, 100] as [number, number];
+    }
+
+    const min = Math.floor(Math.min(...values));
+    const max = Math.ceil(Math.max(...values));
+    if (min === max) {
+      return [0, Math.max(100, max)] as [number, number];
+    }
+    return [min, max] as [number, number];
+  }, [normalizedProducts]);
+
+  useEffect(() => {
+    setPriceRange(priceBounds);
+  }, [priceBounds]);
+
+  const categoriesWithAll = ["all", ...derivedCategories];
   const HeroIcon = home.hero.Icon;
 
-  // Demo storefront shows products for the configured site only
-  const filteredProducts = mockProducts
-    .filter(p => p.siteId === home.productSiteId)
-    .filter(p => p.status === "published")
-    .filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           p.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "all" || p.category === selectedCategory;
-      const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
-      return matchesSearch && matchesCategory && matchesPrice;
-    });
+  const filteredProducts = normalizedProducts.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || product.categories.includes(selectedCategory);
+    const matchesPrice =
+      product.priceAmount === undefined ||
+      (product.priceAmount >= priceRange[0] && product.priceAmount <= priceRange[1]);
+    return matchesSearch && matchesCategory && matchesPrice;
+  });
 
   const FilterPanel = () => (
     <div className="space-y-6">
       <div>
         <h3 className="mb-4">Categories</h3>
         <div className="space-y-2">
-          {categories.map((cat) => (
+          {categoriesWithAll.map((cat) => (
             <div key={cat} className="flex items-center space-x-2">
               <Checkbox
                 id={cat}
@@ -61,13 +140,7 @@ export function StorefrontHome({
       <div>
         <h3 className="mb-4">Price Range</h3>
         <div className="space-y-4">
-          <Slider
-            value={priceRange}
-            onValueChange={setPriceRange}
-            max={100}
-            step={5}
-            className="w-full"
-          />
+          <Slider value={priceRange} onValueChange={setPriceRange} min={priceBounds[0]} max={priceBounds[1]} step={1} className="w-full" />
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>${priceRange[0]}</span>
             <span>${priceRange[1]}</span>
@@ -158,8 +231,19 @@ export function StorefrontHome({
               </Sheet>
             </div>
 
+            {isLoading && (
+              <div className="text-center py-12 text-muted-foreground">Loading products...</div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product) => {
+                const priceLabel =
+                  product.priceAmount !== undefined
+                    ? `${product.priceAmount.toFixed(2)} ${product.priceCurrency ?? ""}`.trim()
+                    : "Price unavailable";
+                const imageUrl =
+                  product.imageUrl ||
+                  "https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=800&q=80";
+                return (
                 <Card
                   key={product.id}
                   className={cn(
@@ -171,7 +255,7 @@ export function StorefrontHome({
                   <CardContent className="p-0">
                     <div className="aspect-square overflow-hidden rounded-t-lg bg-gradient-to-br from-pink-50 to-green-50">
                       <img
-                        src={product.imageUrl}
+                        src={imageUrl}
                         alt={product.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
@@ -181,25 +265,31 @@ export function StorefrontHome({
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {product.description}
                       </p>
-                      <div className="flex items-center justify-between">
-                        <span className={cn("text-xl", home.productCard.priceClass)}>${product.price}</span>
-                        {product.stock === 0 ? (
-                          <Badge variant="destructive">Sold Out</Badge>
-                        ) : product.stock < 15 ? (
-                          <Badge className="bg-[#F59E0B] hover:bg-[#F59E0B]/90">
-                            Only {product.stock} left
-                          </Badge>
-                        ) : (
-                          <Badge className={home.productCard.freshBadgeClass}>Fresh Today</Badge>
-                        )}
-                      </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-col gap-2">
+                            <span className={cn("text-xl", home.productCard.priceClass)}>{priceLabel}</span>
+                            <Badge variant="secondary" className="w-fit uppercase tracking-wide">
+                              Published
+                            </Badge>
+                          </div>
+                          {product.stock === 0 ? (
+                            <Badge variant="destructive">Sold Out</Badge>
+                          ) : typeof product.stock === "number" && product.stock < 15 ? (
+                            <Badge className="bg-[#F59E0B] hover:bg-[#F59E0B]/90">
+                              Only {product.stock} left
+                            </Badge>
+                          ) : (
+                            <Badge className={home.productCard.freshBadgeClass}>Fresh Today</Badge>
+                          )}
+                        </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
 
-            {filteredProducts.length === 0 && (
+            {!isLoading && filteredProducts.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No products found matching your criteria</p>
               </div>

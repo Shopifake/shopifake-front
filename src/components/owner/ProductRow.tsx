@@ -3,10 +3,11 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { TableCell, TableRow } from "../ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { Edit, Trash2, MoreHorizontal, Loader2, Package } from "lucide-react";
+import { Edit, Trash2, MoreHorizontal, Loader2, Package, RefreshCcw } from "lucide-react";
 import { useGetActivePrice } from "../../hooks/pricing";
 import { useGetInventoryByProduct, useAdjustInventory } from "../../hooks/inventory";
-import type { ProductResponse } from "../../types/api/catalogApiTypes";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import type { ProductResponse, ProductStatus } from "../../types/api/catalogApiTypes";
 import {
   Dialog,
   DialogContent,
@@ -19,21 +20,40 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { toast } from "sonner";
+import { useUpdateProductStatus } from "../../hooks/catalog";
 
 type ProductRowProps = {
   product: ProductResponse;
   onEdit: () => void;
   onDelete: () => void;
+  onStatusChange?: () => void;
 };
 
-export function ProductRow({ product, onEdit, onDelete }: ProductRowProps) {
+const PRODUCT_STATUSES: ProductStatus[] = ["DRAFT", "PUBLISHED", "SCHEDULED"];
+
+const toInputDateTime = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toISOString().slice(0, 16);
+};
+
+export function ProductRow({ product, onEdit, onDelete, onStatusChange }: ProductRowProps) {
   const [isAdjustDialogOpen, setIsAdjustDialogOpen] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [quantityDelta, setQuantityDelta] = useState("");
   const [reason, setReason] = useState("");
-  
+  const [nextStatus, setNextStatus] = useState<ProductStatus>(product.status);
+  const [scheduledPublishAt, setScheduledPublishAt] = useState("");
+
   const { price, isLoading: isLoadingPrice } = useGetActivePrice(product.id);
   const { inventory, isLoading: isLoadingInventory, refetch: refetchInventory } = useGetInventoryByProduct(product.id);
   const { adjustInventory, isLoading: isAdjusting } = useAdjustInventory();
+  const { updateProductStatus, isLoading: isUpdatingStatus } = useUpdateProductStatus();
 
   const firstImage = product.images && product.images.length > 0 ? product.images[0] : null;
   const categoryNames = product.categories?.map((c) => c.name).join(", ") || "Uncategorized";
@@ -63,6 +83,32 @@ export function ProductRow({ product, onEdit, onDelete }: ProductRowProps) {
       setQuantityDelta("");
       setReason("");
       refetchInventory();
+    }
+  };
+
+  const handleOpenStatusDialog = () => {
+    setNextStatus(product.status);
+    setScheduledPublishAt(toInputDateTime(product.scheduledPublishAt));
+    setIsStatusDialogOpen(true);
+  };
+
+  const handleChangeStatus = async () => {
+    if (nextStatus === "SCHEDULED" && !scheduledPublishAt) {
+      toast.error("Veuillez définir une date de publication programmée.");
+      return;
+    }
+
+    const payload = {
+      status: nextStatus,
+      scheduledPublishAt:
+        nextStatus === "SCHEDULED" && scheduledPublishAt ? new Date(scheduledPublishAt).toISOString() : undefined,
+    };
+
+    const updated = await updateProductStatus(product.id, payload);
+    if (updated) {
+      toast.success(`Statut mis à jour: ${updated.status.toLowerCase()}`);
+      setIsStatusDialogOpen(false);
+      onStatusChange?.();
     }
   };
 
@@ -134,6 +180,10 @@ export function ProductRow({ product, onEdit, onDelete }: ProductRowProps) {
             <DropdownMenuItem onClick={onEdit}>
               <Edit className="mr-2 h-4 w-4" />
               Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleOpenStatusDialog}>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Change status
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setIsAdjustDialogOpen(true)}>
               <Package className="mr-2 h-4 w-4" />
@@ -216,6 +266,71 @@ export function ProductRow({ product, onEdit, onDelete }: ProductRowProps) {
             <Button onClick={handleAdjustInventory} disabled={isAdjusting}>
               {isAdjusting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Ajuster l'inventaire
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Changer le statut</DialogTitle>
+            <DialogDescription>
+              Mettez à jour le statut de {product.name}. Utilisez l'option "Scheduled" pour planifier une publication.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Statut</Label>
+              <Select
+                value={nextStatus}
+                onValueChange={(value) => {
+                  const typedValue = value as ProductStatus;
+                  setNextStatus(typedValue);
+                  if (typedValue !== "SCHEDULED") {
+                    setScheduledPublishAt("");
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRODUCT_STATUSES.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {nextStatus === "SCHEDULED" && (
+              <div className="space-y-2">
+                <Label htmlFor="schedule-date">Publication programmée</Label>
+                <Input
+                  id="schedule-date"
+                  type="datetime-local"
+                  value={scheduledPublishAt}
+                  onChange={(event) => setScheduledPublishAt(event.target.value)}
+                  disabled={isUpdatingStatus}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Définissez la date et l'heure auxquelles le produit sera automatiquement publié.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)} disabled={isUpdatingStatus}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleChangeStatus}
+              disabled={isUpdatingStatus || (nextStatus === "SCHEDULED" && !scheduledPublishAt)}
+            >
+              {isUpdatingStatus && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Mettre à jour le statut
             </Button>
           </DialogFooter>
         </DialogContent>

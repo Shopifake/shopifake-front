@@ -1,39 +1,84 @@
+import { useMemo } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
-import { mockProducts } from "../../lib/mock-data";
 import { cn } from "../ui/utils";
 import { useStorefrontConfig } from "../../lib/storefront-config";
+import type { StorefrontProductEntry } from "../../types/storefront";
 
 interface CartItem {
   productId: string;
   quantity: number;
 }
 
-export function Cart({ 
-  items, 
-  onUpdateQuantity, 
-  onRemove, 
-  onCheckout, 
-  onContinueShopping 
-}: { 
+type CartProps = {
   items: CartItem[];
+  products: StorefrontProductEntry[];
   onUpdateQuantity: (productId: string, quantity: number) => void;
   onRemove: (productId: string) => void;
   onCheckout: () => void;
   onContinueShopping: () => void;
-}) {
-  const { cart } = useStorefrontConfig();
-  const cartItems = items.map(item => ({
-    ...item,
-    product: mockProducts.find(p => p.id === item.productId)!
-  })).filter(item => item.product);
+};
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+const normalizeProduct = (entry: StorefrontProductEntry) => {
+  if (entry.kind === "live") {
+    return {
+      id: entry.product.id,
+      name: entry.product.name,
+      imageUrl: entry.product.images?.[0],
+      category: entry.product.categories?.[0]?.name ?? "Uncategorized",
+      priceAmount: entry.price?.amount ?? 0,
+      priceCurrency: entry.price?.currency ?? "USD",
+      stock: entry.inventory?.availableQuantity ?? Number.POSITIVE_INFINITY,
+    };
+  }
+
+  return {
+    id: entry.product.id,
+    name: entry.product.name,
+    imageUrl: entry.product.imageUrl,
+    category: entry.product.category ?? "Uncategorized",
+    priceAmount: entry.product.price,
+    priceCurrency: "USD",
+    stock: typeof entry.product.stock === "number" ? entry.product.stock : Number.POSITIVE_INFINITY,
+  };
+};
+
+export function Cart({ items, products, onUpdateQuantity, onRemove, onCheckout, onContinueShopping }: CartProps) {
+  const { cart } = useStorefrontConfig();
+
+  const productMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof normalizeProduct>>();
+    products.forEach((entry) => {
+      const normalized = normalizeProduct(entry);
+      map.set(normalized.id, normalized);
+    });
+    return map;
+  }, [products]);
+
+  const cartItems = items
+    .map((item) => {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return null;
+      }
+      return { ...item, product };
+    })
+    .filter((item): item is { productId: string; quantity: number; product: ReturnType<typeof normalizeProduct> } => Boolean(item));
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.product.priceAmount * item.quantity, 0);
   const shipping = subtotal > 50 ? 0 : 9.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shipping + tax;
+
+  if (items.length > 0 && cartItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading your cart…</p>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -65,50 +110,61 @@ export function Cart({
             <Card>
               <CardContent className="p-6">
                 <div className="space-y-6">
-                  {cartItems.map((item) => (
-                    <div key={item.productId}>
-                      <div className="flex gap-4">
-                        <img
-                          src={item.product.imageUrl}
-                          alt={item.product.name}
-                          className="h-24 w-24 rounded-lg object-cover"
-                        />
-                        <div className="flex-1">
-                          <h3 className="mb-1">{item.product.name}</h3>
-                          <p className="text-sm text-muted-foreground mb-2">{item.product.category}</p>
-                          <p className="text-primary">${item.product.price}</p>
-                        </div>
-                        <div className="flex flex-col items-end justify-between">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onRemove(item.productId)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <div className="flex items-center border rounded-lg">
-                            <button
-                              onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
-                              className="px-3 py-1 hover:bg-muted"
-                              disabled={item.quantity <= 1}
+                  {cartItems.map((item) => {
+                    const hasStockLimit = Number.isFinite(item.product.stock);
+                    const maxQuantity = hasStockLimit ? (item.product.stock as number) : undefined;
+                    const disableIncrement = typeof maxQuantity === "number" && item.quantity >= maxQuantity;
+
+                    return (
+                      <div key={item.productId}>
+                        <div className="flex gap-4">
+                          <img
+                            src={
+                              item.product.imageUrl ??
+                              "https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=800&q=80"
+                            }
+                            alt={item.product.name}
+                            className="h-24 w-24 rounded-lg object-cover"
+                          />
+                          <div className="flex-1">
+                            <h3 className="mb-1">{item.product.name}</h3>
+                            <p className="text-sm text-muted-foreground mb-2">{item.product.category}</p>
+                            <p className="text-primary">
+                              {`${item.product.priceAmount.toFixed(2)} ${item.product.priceCurrency ?? ""}`.trim()}
+                            </p>
+                          </div>
+                          <div className="flex flex-col items-end justify-between">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => onRemove(item.productId)}
+                              className="text-destructive hover:text-destructive"
                             >
-                              <Minus className="h-4 w-4" />
-                            </button>
-                            <span className="px-4 py-1 border-x">{item.quantity}</span>
-                            <button
-                              onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
-                              className="px-3 py-1 hover:bg-muted"
-                              disabled={item.quantity >= item.product.stock}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </button>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <div className="flex items-center border rounded-lg">
+                              <button
+                                onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
+                                className="px-3 py-1 hover:bg-muted"
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </button>
+                              <span className="px-4 py-1 border-x">{item.quantity}</span>
+                              <button
+                                onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
+                                className="px-3 py-1 hover:bg-muted"
+                                disabled={disableIncrement}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
                         </div>
+                        <Separator className="mt-6" />
                       </div>
-                      <Separator className="mt-6" />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

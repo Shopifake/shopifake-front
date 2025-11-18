@@ -110,7 +110,7 @@ export default function App() {
       }
 
       // Build storefront config from site config
-      const config = buildStorefrontConfigFromSiteConfig(siteConfig, subdomainSite.name);
+      const config = buildStorefrontConfigFromSiteConfig(siteConfig, subdomainSite.name, subdomainSite.id);
       setStorefrontConfig(config);
       setMode("storefront");
     } else if (subdomain && !isLoadingSubdomainSite && !subdomainSite) {
@@ -595,6 +595,7 @@ export default function App() {
         <StorefrontExperience
           config={storefrontConfig}
           onReturnToMain={subdomain ? undefined : handleReturnToMain}
+          isLiveStorefront
         />
       </>
     );
@@ -627,6 +628,7 @@ export default function App() {
     return (
       <StorefrontExperience
         config={config}
+        isLiveStorefront={false}
         onReturnToMain={() => {
           clearPreviewDraft();
           window.location.href = window.location.origin;

@@ -12,7 +12,6 @@ import { Checkbox } from "../ui/checkbox";
 import {
   useCreateProduct,
   useUpdateProduct,
-  useUpdateProductStatus,
   useGetProduct,
   useListCategories,
   useCreateCategory,
@@ -134,7 +133,6 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
   const { price: activePrice, isLoading: isLoadingActivePrice } = useGetActivePrice(productId);
   const { createProduct, isLoading: isCreatingProduct } = useCreateProduct();
   const { updateProduct, isLoading: isUpdatingProduct } = useUpdateProduct();
-  const { updateProductStatus, isLoading: isUpdatingStatus } = useUpdateProductStatus();
   const { createInventory, isLoading: isCreatingInventory } = useCreateInventory();
   const { createPrice, isLoading: isCreatingPrice } = useCreatePrice();
   const { updatePrice, isLoading: isUpdatingPrice } = useUpdatePrice();
@@ -468,13 +466,7 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
 
   const isEditMode = Boolean(productId);
   const isSaving =
-    isSubmitting ||
-    isCreatingProduct ||
-    isUpdatingProduct ||
-    isUpdatingStatus ||
-    isCreatingInventory ||
-    isCreatingPrice ||
-    isUpdatingPrice;
+    isSubmitting || isCreatingProduct || isUpdatingProduct || isCreatingInventory || isCreatingPrice || isUpdatingPrice;
   const canCreateCategory = Boolean(newCategoryName.trim()) && !isCreatingCategory;
   const canCreateFilter =
     Boolean(newFilterForm.key.trim()) &&
@@ -517,16 +509,6 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
         const updatedProduct = await updateProduct(productId, updatePayload);
         if (!updatedProduct) {
           throw new Error("La mise à jour du produit a échoué.");
-        }
-
-        // Update status if changed
-        if (product && product.status !== formState.status) {
-          await updateProductStatus(productId, {
-            status: formState.status,
-            scheduledPublishAt: formState.scheduledPublishAt
-              ? new Date(formState.scheduledPublishAt).toISOString()
-              : undefined,
-          });
         }
 
         // Update price if changed
@@ -662,36 +644,40 @@ export function ProductForm({ siteId, productId, onBack }: ProductFormProps) {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="status">Statut</Label>
-                    <Select
-                      value={formState.status}
-                      onValueChange={(value) => setFormState((prev) => ({ ...prev, status: value as ProductStatus }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un statut" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRODUCT_STATUSES.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {!isEditMode && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Statut</Label>
+                      <Select
+                        value={formState.status}
+                        onValueChange={(value) => setFormState((prev) => ({ ...prev, status: value as ProductStatus }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un statut" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRODUCT_STATUSES.map((status) => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="scheduledPublishAt">Publication programmée</Label>
+                      <Input
+                        id="scheduledPublishAt"
+                        type="datetime-local"
+                        value={formState.scheduledPublishAt}
+                        onChange={(event) =>
+                          setFormState((prev) => ({ ...prev, scheduledPublishAt: event.target.value }))
+                        }
+                        disabled={formState.status !== "SCHEDULED"}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="scheduledPublishAt">Publication programmée</Label>
-                    <Input
-                      id="scheduledPublishAt"
-                      type="datetime-local"
-                      value={formState.scheduledPublishAt}
-                      onChange={(event) => setFormState((prev) => ({ ...prev, scheduledPublishAt: event.target.value }))}
-                      disabled={formState.status !== "SCHEDULED"}
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>

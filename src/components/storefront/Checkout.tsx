@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -6,26 +6,72 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Separator } from "../ui/separator";
 import { CreditCard, Truck } from "lucide-react";
-import { mockProducts } from "../../lib/mock-data";
+import type { StorefrontProductEntry } from "../../types/storefront";
 
 interface CartItem {
   productId: string;
   quantity: number;
 }
 
-export function Checkout({ items, onComplete }: { items: CartItem[]; onComplete: () => void }) {
+type CheckoutProps = {
+  items: CartItem[];
+  products: StorefrontProductEntry[];
+  onComplete: () => void;
+};
+
+const normalizeProduct = (entry: StorefrontProductEntry) => {
+  if (entry.kind === "live") {
+    return {
+      id: entry.product.id,
+      name: entry.product.name,
+      priceAmount: entry.price?.amount ?? 0,
+      priceCurrency: entry.price?.currency ?? "USD",
+    };
+  }
+
+  return {
+    id: entry.product.id,
+    name: entry.product.name,
+    priceAmount: entry.product.price,
+    priceCurrency: "USD",
+  };
+};
+
+export function Checkout({ items, products, onComplete }: CheckoutProps) {
   const [shippingMethod, setShippingMethod] = useState("standard");
   const [paymentMethod, setPaymentMethod] = useState("card");
 
-  const cartItems = items.map(item => ({
-    ...item,
-    product: mockProducts.find(p => p.id === item.productId)!
-  })).filter(item => item.product);
+  const productMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof normalizeProduct>>();
+    products.forEach((entry) => {
+      const normalized = normalizeProduct(entry);
+      map.set(normalized.id, normalized);
+    });
+    return map;
+  }, [products]);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const cartItems = items
+    .map((item) => {
+      const product = productMap.get(item.productId);
+      if (!product) {
+        return null;
+      }
+      return { ...item, product };
+    })
+    .filter((item): item is { productId: string; quantity: number; product: ReturnType<typeof normalizeProduct> } => Boolean(item));
+
+  const subtotal = cartItems.reduce((sum, item) => sum + item.product.priceAmount * item.quantity, 0);
   const shippingCost = shippingMethod === "express" ? 14.99 : subtotal > 50 ? 0 : 9.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shippingCost + tax;
+
+  if (items.length > 0 && cartItems.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading checkout…</p>
+      </div>
+    );
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,7 +228,7 @@ export function Checkout({ items, onComplete }: { items: CartItem[]; onComplete:
                         <span>
                           {item.product.name} × {item.quantity}
                         </span>
-                        <span>${(item.product.price * item.quantity).toFixed(2)}</span>
+                        <span>${(item.product.priceAmount * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
