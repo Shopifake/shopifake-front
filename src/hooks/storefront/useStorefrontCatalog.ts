@@ -24,6 +24,50 @@ export function useStorefrontCatalog(siteId?: string, enabled = true) {
   const [products, setProducts] = useState<StorefrontProductEntry[]>([]);
   const [status, setStatus] = useState<FetchState>("idle");
 
+  const fetchCatalog = async () => {
+    if (!siteId || !enabled) {
+      setProducts([]);
+      setStatus("idle");
+      return;
+    }
+
+    setStatus("loading");
+    try {
+      const query = `?siteId=${encodeURIComponent(siteId)}`;
+      const response = await fetch(`${API_BASE_URL}/api/catalog/products/public${query}`);
+
+      if (!response.ok) {
+        console.error("Failed to fetch storefront products", await response.text());
+        setProducts([]);
+        return;
+      }
+
+      const data = (await response.json()) as ProductResponse[];
+      const enriched: StorefrontProductEntry[] = await Promise.all(
+        data.map(async (product) => {
+          const [price, inventory] = await Promise.all([
+            fetchJsonSafely<PriceResponse>(`${API_BASE_URL}/api/prices/product/${product.id}/active`),
+            fetchJsonSafely<InventoryResponse>(`${API_BASE_URL}/api/inventory/${product.id}`),
+          ]);
+
+          return {
+            kind: "live",
+            product,
+            price,
+            inventory,
+          } satisfies StorefrontProductEntry;
+        }),
+      );
+
+      setProducts(enriched);
+    } catch (error) {
+      console.error("Unable to load storefront catalog", error);
+      setProducts([]);
+    } finally {
+      setStatus("idle");
+    }
+  };
+
   useEffect(() => {
     if (!siteId || !enabled) {
       setProducts([]);
@@ -32,52 +76,6 @@ export function useStorefrontCatalog(siteId?: string, enabled = true) {
     }
 
     let cancelled = false;
-    const fetchCatalog = async () => {
-      setStatus("loading");
-      try {
-        const query = `?siteId=${encodeURIComponent(siteId)}`;
-        const response = await fetch(`${API_BASE_URL}/api/catalog/products/public${query}`);
-
-        if (!response.ok) {
-          console.error("Failed to fetch storefront products", await response.text());
-          if (!cancelled) {
-            setProducts([]);
-          }
-          return;
-        }
-
-        const data = (await response.json()) as ProductResponse[];
-        const enriched: StorefrontProductEntry[] = await Promise.all(
-          data.map(async (product) => {
-            const [price, inventory] = await Promise.all([
-              fetchJsonSafely<PriceResponse>(`${API_BASE_URL}/api/prices/product/${product.id}/active`),
-              fetchJsonSafely<InventoryResponse>(`${API_BASE_URL}/api/inventory/${product.id}`),
-            ]);
-
-            return {
-              kind: "live",
-              product,
-              price,
-              inventory,
-            } satisfies StorefrontProductEntry;
-          }),
-        );
-
-        if (!cancelled) {
-          setProducts(enriched);
-        }
-      } catch (error) {
-        console.error("Unable to load storefront catalog", error);
-        if (!cancelled) {
-          setProducts([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setStatus("idle");
-        }
-      }
-    };
-
     fetchCatalog();
 
     return () => {
@@ -88,6 +86,7 @@ export function useStorefrontCatalog(siteId?: string, enabled = true) {
   return {
     products,
     isLoading: status === "loading",
+    refetch: fetchCatalog,
   };
 }
 
