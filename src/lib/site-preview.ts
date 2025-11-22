@@ -1,4 +1,5 @@
 import { mockStorefrontConfig, type StorefrontConfig } from "./storefront-config";
+import type { SiteConfig } from "../types/api/sitesApiTypes";
 
 export interface SiteDraft {
   bannerUrl: string;
@@ -39,6 +40,55 @@ export function createEmptySiteDraft(): SiteDraft {
     contactExtraNote: "",
     primaryColor: "#000000",
     secondaryColor: "#000000",
+  };
+}
+
+export function siteConfigToDraft(config: SiteConfig): SiteDraft {
+  return {
+    bannerUrl: config.bannerUrl ?? "",
+    name: config.name ?? "",
+    title: config.title ?? "",
+    subtitle: config.subtitle ?? "",
+    heroDescription: config.heroDescription ?? "",
+    logoUrl: config.logoUrl ?? "",
+    aboutPortraitOneUrl: config.aboutPortraitOneUrl ?? "",
+    aboutLandscapeUrl: config.aboutLandscapeUrl ?? "",
+    aboutPortraitTwoUrl: config.aboutPortraitTwoUrl ?? "",
+    history: config.history ?? "",
+    values: [
+      config.values?.[0] ?? "",
+      config.values?.[1] ?? "",
+      config.values?.[2] ?? "",
+      config.values?.[3] ?? "",
+    ],
+    contactHeading: config.contactHeading ?? "",
+    contactDescription: config.contactDescription ?? "",
+    contactDetails: config.contactDetails ?? "",
+    contactExtraNote: config.contactExtraNote ?? "",
+    primaryColor: config.primaryColor ?? "#000000",
+    secondaryColor: config.secondaryColor ?? "#000000",
+  };
+}
+
+export function draftToSiteConfig(draft: SiteDraft): SiteConfig {
+  return {
+    bannerUrl: draft.bannerUrl,
+    name: draft.name,
+    title: draft.title,
+    subtitle: draft.subtitle,
+    heroDescription: draft.heroDescription,
+    logoUrl: draft.logoUrl,
+    aboutPortraitOneUrl: draft.aboutPortraitOneUrl,
+    aboutLandscapeUrl: draft.aboutLandscapeUrl,
+    aboutPortraitTwoUrl: draft.aboutPortraitTwoUrl,
+    history: draft.history,
+    values: [...draft.values],
+    contactHeading: draft.contactHeading,
+    contactDescription: draft.contactDescription,
+    contactDetails: draft.contactDetails,
+    contactExtraNote: draft.contactExtraNote,
+    primaryColor: draft.primaryColor || demoSiteDraft.primaryColor,
+    secondaryColor: draft.secondaryColor || demoSiteDraft.secondaryColor,
   };
 }
 

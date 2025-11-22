@@ -1,23 +1,76 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ArrowLeft, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw } from "lucide-react";
-import { mockProducts } from "../../lib/mock-data";
+import type { StorefrontProductEntry } from "../../types/storefront";
 
-export function ProductDetail({ productId, onBack, onAddToCart }: { 
+type ProductDetailProps = {
   productId: string;
+  products: StorefrontProductEntry[];
   onBack: () => void;
   onAddToCart: (productId: string, quantity: number) => void;
-}) {
+};
+
+const normalizeEntry = (entry: StorefrontProductEntry) => {
+  if (entry.kind === "live") {
+    const category = entry.product.categories?.[0]?.name ?? "Uncategorized";
+    const images = entry.product.images?.length ? entry.product.images : [];
+    return {
+      id: entry.product.id,
+      name: entry.product.name,
+      description: entry.product.description ?? "",
+      category,
+      images,
+      sku: entry.product.sku,
+      priceAmount: entry.price?.amount,
+      priceCurrency: entry.price?.currency,
+      stock: entry.inventory?.availableQuantity ?? 0,
+      status: entry.product.status,
+      entry,
+    };
+  }
+
+  return {
+    id: entry.product.id,
+    name: entry.product.name,
+    description: entry.product.description ?? "",
+    category: entry.product.category ?? "Uncategorized",
+    images: entry.product.imageUrl ? [entry.product.imageUrl] : [],
+    sku: entry.product.sku,
+    priceAmount: entry.product.price,
+    priceCurrency: "USD",
+    stock: entry.product.stock,
+    status: entry.product.status,
+    entry,
+  };
+};
+
+export function ProductDetail({ productId, products, onBack, onAddToCart }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1);
-  const product = mockProducts.find(p => p.id === productId);
+
+  const normalized = useMemo(() => products.map(normalizeEntry), [products]);
+  const product = normalized.find((item) => item.id === productId);
 
   if (!product) return null;
 
-  const relatedProducts = mockProducts
-    .filter(p => p.siteId === "1" && p.category === product.category && p.id !== product.id && p.status === "published")
+  const priceLabel =
+    product.priceAmount !== undefined
+      ? `${product.priceAmount.toFixed(2)} ${product.priceCurrency ?? ""}`.trim()
+      : "Price unavailable";
+  const stockLimit = typeof product.stock === "number" ? Math.max(0, product.stock) : Number.POSITIVE_INFINITY;
+  const isOutOfStock = stockLimit === 0;
+
+  const relatedProducts = normalized
+    .filter((item) => {
+      if (item.id === product.id || item.category !== product.category) {
+        return false;
+      }
+      const status =
+        item.entry.kind === "mock" ? item.entry.product.status.toLowerCase() : item.entry.product.status.toLowerCase();
+      return status === "published";
+    })
     .slice(0, 3);
 
   return (
@@ -32,19 +85,15 @@ export function ProductDetail({ productId, onBack, onAddToCart }: {
           <div className="space-y-4">
             <div className="aspect-square rounded-lg overflow-hidden bg-muted">
               <img
-                src={product.imageUrl}
+                src={product.images[0] ?? "https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=800&q=80"}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
             </div>
             <div className="grid grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:ring-2 ring-primary">
-                  <img
-                    src={product.imageUrl}
-                    alt={`${product.name} ${i}`}
-                    className="w-full h-full object-cover"
-                  />
+              {product.images.slice(0, 4).map((image, index) => (
+                <div key={`${image}-${index}`} className="aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:ring-2 ring-primary">
+                  <img src={image} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
@@ -55,8 +104,8 @@ export function ProductDetail({ productId, onBack, onAddToCart }: {
               <Badge className="mb-2">{product.category}</Badge>
               <h1 className="mb-4">{product.name}</h1>
               <div className="flex items-center gap-4 mb-4">
-                <span className="text-3xl text-primary">${product.price}</span>
-                {product.stock > 0 ? (
+                <span className="text-3xl text-primary">{priceLabel}</span>
+                {!isOutOfStock ? (
                   <Badge className="bg-[#22C55E] hover:bg-[#22C55E]/90">In Stock</Badge>
                 ) : (
                   <Badge variant="destructive">Out of Stock</Badge>
@@ -76,16 +125,20 @@ export function ProductDetail({ productId, onBack, onAddToCart }: {
                   </button>
                   <span className="px-4 py-2 border-x">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                    onClick={() =>
+                      setQuantity(
+                        Number.isFinite(stockLimit) ? Math.min(stockLimit, quantity + 1) : quantity + 1,
+                      )
+                    }
                     className="px-4 py-2 hover:bg-muted"
-                    disabled={quantity >= product.stock}
+                    disabled={isOutOfStock}
                   >
                     +
                   </button>
                 </div>
                 <Button
                   className="flex-1 bg-primary hover:bg-primary/90"
-                  disabled={product.stock === 0}
+                  disabled={isOutOfStock}
                   onClick={() => onAddToCart(product.id, quantity)}
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
@@ -151,7 +204,7 @@ export function ProductDetail({ productId, onBack, onAddToCart }: {
                   </div>
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Stock</dt>
-                    <dd>{product.stock} units</dd>
+                    <dd>{Number.isFinite(stockLimit) ? `${stockLimit} units` : "Available"}</dd>
                   </div>
                 </dl>
               </CardContent>
@@ -175,14 +228,21 @@ export function ProductDetail({ productId, onBack, onAddToCart }: {
                   <CardContent className="p-0">
                     <div className="aspect-square overflow-hidden rounded-t-lg bg-muted">
                       <img
-                        src={relatedProduct.imageUrl}
+                        src={
+                          relatedProduct.images[0] ??
+                          "https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=800&q=80"
+                        }
                         alt={relatedProduct.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="p-4">
                       <h3 className="mb-2">{relatedProduct.name}</h3>
-                      <span className="text-xl text-primary">${relatedProduct.price}</span>
+                      <span className="text-xl text-primary">
+                        {relatedProduct.priceAmount !== undefined
+                          ? `${relatedProduct.priceAmount.toFixed(2)} ${relatedProduct.priceCurrency ?? ""}`.trim()
+                          : "Price unavailable"}
+                      </span>
                     </div>
                   </CardContent>
                 </Card>
