@@ -54,3 +54,4 @@ out/
 k8s/deploy_all.sh
 k8s/.env
 k8s/k9s.sh
+debug.md

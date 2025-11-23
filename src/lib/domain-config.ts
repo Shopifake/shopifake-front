@@ -14,7 +14,7 @@ const getBaseDomain = (): string => {
   }
 
   // Production fallback
-  return "shopifake.fr";
+  return "shopifake.com";
 };
 
 export const BASE_DOMAIN = getBaseDomain();
