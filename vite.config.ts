@@ -58,6 +58,8 @@
     },
     server: {
       port: 3000,
+      host: true,
       open: process.env.DEVPOD ? false : true,
+      allowedHosts: true,
     },
   });

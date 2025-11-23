@@ -7,7 +7,7 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { toast } from "sonner";
-import { createEmptySiteDraft, demoSiteDraft, type SiteDraft } from "../../lib/site-preview";
+import { createEmptySiteDraft, demoSiteDraft, draftToSiteConfig, type SiteDraft } from "../../lib/site-preview";
 import { useCreateSite, useCheckSlugAvailability, useSuggestSlug, useGetLanguages, useGetCurrencies } from "../../hooks/sites";
 import type { SiteConfig, Currency, Language } from "../../types/api/sitesApiTypes";
 import { getSiteUrl, BASE_DOMAIN } from "../../lib/domain-config";
@@ -132,25 +132,7 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
     toast.loading("Creating site...", { id: "creating" });
 
     // Convert SiteDraft to SiteConfig format
-    const siteConfig: SiteConfig = {
-      bannerUrl: formData.bannerUrl,
-      name: formData.name,
-      title: formData.title,
-      subtitle: formData.subtitle,
-      heroDescription: formData.heroDescription,
-      logoUrl: formData.logoUrl,
-      aboutPortraitOneUrl: formData.aboutPortraitOneUrl,
-      aboutLandscapeUrl: formData.aboutLandscapeUrl,
-      aboutPortraitTwoUrl: formData.aboutPortraitTwoUrl,
-      history: formData.history,
-      values: [...formData.values],
-      contactHeading: formData.contactHeading,
-      contactDescription: formData.contactDescription,
-      contactDetails: formData.contactDetails,
-      contactExtraNote: formData.contactExtraNote,
-      primaryColor: formData.primaryColor || demoSiteDraft.primaryColor,
-      secondaryColor: formData.secondaryColor || demoSiteDraft.secondaryColor,
-    };
+    const siteConfig = draftToSiteConfig(formData);
 
     // Create the site via API
     const site = await createSite({

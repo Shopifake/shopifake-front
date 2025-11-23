@@ -252,6 +252,8 @@ export const mockProducts = [
   },
 ];
 
+export type MockProduct = (typeof mockProducts)[number];
+
 export const mockOrders = [
   {
     id: "ORD-1001",

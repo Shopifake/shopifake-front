@@ -1,7 +1,7 @@
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText, Power } from "lucide-react";
+import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText, Power, Code2 } from "lucide-react";
 import { useGetSiteById, useUpdateSiteStatus } from "../../hooks/sites";
 import { Skeleton } from "../ui/skeleton";
 import type { SiteStatus } from "../../types/api/sitesApiTypes";
@@ -177,6 +177,10 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
               {isDraft ? "Activate" : isActive ? "Disable" : "Activate"}
             </Button>
           )}
+          <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-config")}>
+            <Code2 className="h-4 w-4" />
+            Edit Config
+          </Button>
           <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-settings")}>
             <Settings className="h-4 w-4" />
             Site Settings

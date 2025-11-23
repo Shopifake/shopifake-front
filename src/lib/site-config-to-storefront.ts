@@ -5,7 +5,11 @@ import { Flower2, Heart, Leaf, Sparkles } from "lucide-react";
 /**
  * Converts a SiteConfig from the API to a StorefrontConfig
  */
-export function buildStorefrontConfigFromSiteConfig(siteConfig: SiteConfig, siteName: string): StorefrontConfig {
+export function buildStorefrontConfigFromSiteConfig(
+  siteConfig: SiteConfig,
+  siteName: string,
+  siteId?: string,
+): StorefrontConfig {
   const base = mockStorefrontConfig;
 
   // Parse contact details
@@ -56,7 +60,7 @@ export function buildStorefrontConfigFromSiteConfig(siteConfig: SiteConfig, site
         titleClass: "storefront-text-primary",
         subtitleClass: "storefront-text-secondary",
       },
-      productSiteId: "site", // This should be the actual site ID when available
+      productSiteId: siteId || "site",
       productCard: {
         hoverBorderClass: "storefront-hover-border-primary",
         titleClass: "storefront-text-primary",
