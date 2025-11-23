@@ -8,7 +8,7 @@ const getBaseDomain = (): string => {
     return envDomain;
   }
   // Fallback for development
-  return "shopifake.fr";
+  return "shopifake.com";
 };
 
 export const BASE_DOMAIN = getBaseDomain();

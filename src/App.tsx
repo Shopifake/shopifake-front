@@ -241,7 +241,7 @@ export default function App() {
               <div ref={heroContainerRef} className="bg-white/10 backdrop-blur-sm rounded-[3rem] px-8 py-6 mb-20 max-w-4xl mx-auto inline-block border border-white/20">
                 <h1 className="text-3xl lg:text-5xl text-white mb-4">
                   <VariableProximity
-                    label="V3 The easier way to sell online"
+                    label="V4 New DNS - The easier way to sell online"
                     fromFontVariationSettings="'wght' 400, 'opsz' 9"
                     toFontVariationSettings="'wght' 1000, 'opsz' 40"
                     containerRef={heroProximityContainerRef}
