@@ -49,6 +49,8 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
   const [lastRequestId, setLastRequestId] = useState<string | null>(null);
   const [isWaitingForResult, setIsWaitingForResult] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [showWidget, setShowWidget] = useState(false);
 
   const { sendChat, isLoading: isSendingChat } = useRecommenderChat();
   const { result, fetchResult, isLoading: isPollingResult } = useRecommenderChatResult();
@@ -118,10 +120,46 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
     }
   };
 
+  const openWidget = () => {
+    setIsAnimating(true);
+    setIsOpen(true);
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        setShowWidget(true);
+        window.setTimeout(() => setIsAnimating(false), 220);
+      });
+    } else {
+      setShowWidget(true);
+      setIsAnimating(false);
+    }
+  };
+
+  const closeWidget = () => {
+    setShowWidget(false);
+    setIsAnimating(true);
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        setIsOpen(false);
+        setIsAnimating(false);
+      }, 220);
+    } else {
+      setIsOpen(false);
+      setIsAnimating(false);
+    }
+  };
+
   return (
     <div style={floatingContainerStyle}>
-      {isOpen && (
-        <div style={{ width: '22rem' }} className=" rounded-2xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">
+      {(isOpen || isAnimating) && (
+        <div
+          style={{
+            width: "22rem",
+            transform: showWidget ? "translateY(0) scale(1)" : "translateY(20px) scale(0.98)",
+            opacity: showWidget ? 1 : 0,
+            transition: "opacity 200ms ease, transform 200ms ease",
+          }}
+          className="rounded-2xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
+        >
           <div className="flex items-center justify-between rounded-t-2xl bg-primary/10 px-4 py-3 text-primary dark:bg-primary/20">
             <div>
               <p className="font-semibold leading-tight">Shopifake Concierge</p>
@@ -131,7 +169,7 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
             </div>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={closeWidget}
               aria-label="Close chat"
               className="rounded-full p-1 text-primary transition hover:bg-primary/20"
             >
@@ -263,7 +301,13 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
 
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (isOpen) {
+            closeWidget();
+          } else {
+            openWidget();
+          }
+        }}
         className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <MessageCircle className="h-4 w-4" />

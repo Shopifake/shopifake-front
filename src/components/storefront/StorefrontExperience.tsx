@@ -173,6 +173,17 @@ export function StorefrontExperience({ config, onReturnToMain, isLiveStorefront 
   }, [config.theme]);
 
   const handleProductClick = (id: string) => {
+    // Check if product exists in catalog
+    const productExists = catalogEntries.some((entry) => {
+      const productId = entry.kind === "live" ? entry.product.id : entry.product.id;
+      return productId === id;
+    });
+
+    if (!productExists) {
+      toast.error("Product not found");
+      return;
+    }
+
     setSelectedProductId(id);
     setView("product-detail");
   };
