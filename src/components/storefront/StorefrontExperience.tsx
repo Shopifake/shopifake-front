@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import React, { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { toast } from "sonner";
 import { Toaster } from "../ui/sonner";
 import { StorefrontConfigProvider, type StorefrontConfig } from "../../lib/storefront-config";
@@ -11,6 +11,7 @@ import { OrderConfirmation } from "./OrderConfirmation";
 import { Categories } from "./Categories";
 import { About } from "./About";
 import { Account } from "./Account";
+import { FloatingChatWidget } from "./FloatingChatWidget";
 import { mockProducts } from "../../lib/mock-data";
 import { useStorefrontCatalog } from "../../hooks/storefront/useStorefrontCatalog";
 import {
@@ -537,6 +538,12 @@ export function StorefrontExperience({ config, onReturnToMain, isLiveStorefront 
         {view === "about" && <About />}
 
         {view === "account" && <Account />}
+
+        <FloatingChatWidget
+          siteId={productSiteId}
+          brandName={config.branding.name}
+          onProductSelect={handleProductClick}
+        />
       </div>
     </StorefrontConfigProvider>
   );

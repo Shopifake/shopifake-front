@@ -5,6 +5,7 @@ import { ShoppingCart, User, Search, Menu, ArrowLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "../ui/sheet";
 import { cn } from "../ui/utils";
 import { useStorefrontConfig } from "../../lib/storefront-config";
+import React from "react";
 
 export function StorefrontHeader({ 
   cartCount, 
