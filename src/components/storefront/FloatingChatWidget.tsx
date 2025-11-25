@@ -23,29 +23,7 @@ const floatingContainerStyle: CSSProperties = {
 export function FloatingChatWidget({ siteId, brandName, onProductSelect }: FloatingChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
-  const [history, setHistory] = useState<ChatHistory>(() => [
-    {
-      role: "rag",
-      content: {
-        reply: `Bonjour${brandName ? ` de ${brandName}` : ""}! Dites-moi ce que vous cherchez et je vous proposerai des idées.`,
-        recommendations: [],
-      },
-    },
-    {
-      role: "user",
-      content: "Je cherche un cadeau pour mon frère qui adore la musique.",
-    },
-    {
-      role: "rag",
-      content: {
-        reply: "Voici ce que je peux vous proposer pour un passionné de musique :",
-        recommendations: [
-          { product_id: "prod-001", name: "Wireless Headphones Pro" },
-          { product_id: "3ea4baa1-8f4b-49b1-b3af-95227565c580", name: "Studio Wireless" },
-        ],
-      },
-    },
-  ]);
+  const [history, setHistory] = useState<ChatHistory>([]);
   const [lastRequestId, setLastRequestId] = useState<string | null>(null);
   const [isWaitingForResult, setIsWaitingForResult] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -160,9 +138,16 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
           }}
           className="rounded-2xl border border-black/10 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900"
         >
-          <div className="flex items-center justify-between rounded-t-2xl bg-primary/10 px-4 py-3 text-primary dark:bg-primary/20">
+          <div
+            className="flex items-center justify-between rounded-t-2xl px-4 py-3 text-[var(--storefront-primary)]"
+          >
             <div>
-              <p className="font-semibold leading-tight">Shopifake Concierge</p>
+              <p
+                className="font-semibold leading-tight"
+                style={{ color: "var(--storefront-primary)" }}
+              >
+                {brandName} Concierge
+              </p>
               <p className="text-xs text-muted-foreground">
                 {assistantThinking ? "Recherche d'idées..." : "Posez vos questions produits"}
               </p>
@@ -171,7 +156,8 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
               type="button"
               onClick={closeWidget}
               aria-label="Close chat"
-              className="rounded-full p-1 text-primary transition hover:bg-primary/20"
+              className="rounded-full p-1 text-[var(--storefront-primary)] transition hover:bg-[var(--storefront-primary-transparent)]"
+              style={{ color: "var(--storefront-primary)", backgroundColor: "var(--storefront-primary-transparent)" }}
             >
               <X className="h-4 w-4" />
             </button>
@@ -250,7 +236,7 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
             {assistantThinking && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 rounded-2xl bg-muted px-3 py-2 text-xs text-foreground shadow-sm">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--storefront-primary)]" />
                   <span>L'assistant prépare des recommandations…</span>
                 </div>
               </div>
@@ -271,11 +257,17 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
                 rows={2}
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    event.currentTarget.form?.requestSubmit();
+                  }
+                }}
                 placeholder={
                   siteId ? "Décrivez ce que vous cherchez..." : "Chat indisponible sans site connecté"
                 }
                 disabled={!siteId || isBusy}
-                className="w-full resize-none rounded-xl border border-muted bg-background px-3 py-2 text-sm text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
+                className="w-full resize-none rounded-xl border border-muted bg-background px-3 py-2 text-sm text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--storefront-primary)] disabled:opacity-60"
               />
 
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -308,7 +300,12 @@ export function FloatingChatWidget({ siteId, brandName, onProductSelect }: Float
             openWidget();
           }
         }}
-        className="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium shadow-lg transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--storefront-primary)]"
+        style={{
+          backgroundColor: "var(--storefront-primary)",
+          color: "var(--storefront-primary-foreground)",
+          boxShadow: "0 15px 30px rgba(0,0,0,0.15)",
+        }}
       >
         <MessageCircle className="h-4 w-4" />
         {isOpen ? "Masquer le chat" : "Besoin d'aide ?"}
