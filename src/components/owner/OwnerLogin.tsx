@@ -5,13 +5,16 @@ import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Chrome, ArrowLeft } from "lucide-react";
 import { Logo } from "../shared/Logo";
+import { useAuth } from "../../hooks/auth-b2e/useAuth";
 
 export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLogin: () => void; onSwitchToSignup: () => void; onReturnToMain?: () => void }) {
   const [email, setEmail] = useState("a@a");
   const [password, setPassword] = useState("password");
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { login, isLoading, error } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: { email?: string; password?: string } = {};
 
@@ -21,7 +24,8 @@ export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLo
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      onLogin();
+      const result = await login({ email, password });
+      if (result) onLogin();
     }
   };
 
@@ -56,7 +60,7 @@ export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLo
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={`bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 ${errors.email ? "border-destructive" : ""}`}
-    
+                  disabled={isLoading}
                 />
                 {errors.email && (
                   <p className="text-sm text-destructive">{errors.email}</p>
@@ -72,26 +76,20 @@ export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLo
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={`bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500 ${errors.password ? "border-destructive" : ""}`}
+                  disabled={isLoading}
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password}</p>
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <input type="checkbox" id="remember" className="rounded" />
-                  <Label htmlFor="remember" className="text-sm text-zinc-400">
-                    Remember me
-                  </Label>
-                </div>
-                <a href="#" className="text-sm text-white hover:underline">
-                  Forgot password?
-                </a>
-              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {isLoading && (
+                <p className="text-sm text-zinc-400">Signing in, please wait...</p>
+              )}
 
-              <Button type="submit" className="w-full bg-black hover:bg-zinc-950 text-white border border-zinc-700">
-                Sign In
+              <Button type="submit" className="w-full bg-black hover:bg-zinc-950 text-white border border-zinc-700" disabled={isLoading}>
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
 

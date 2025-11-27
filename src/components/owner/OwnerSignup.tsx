@@ -6,11 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Logo } from "../shared/Logo";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
+import { useAuth } from "../../hooks/auth-b2e/useAuth";
 
 export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onSignup: () => void; onSwitchToLogin: () => void; onReturnToMain?: () => void }) {
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
     address: "",
@@ -20,12 +23,16 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showVerification, setShowVerification] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { register, isLoading, error } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name) newErrors.name = "Name is required";
+    if (!formData.firstName) newErrors.firstName = "First name is required";
+    if (!formData.lastName) newErrors.lastName = "Last name is required";
     if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.phone) newErrors.phone = "Phone number is required";
     if (!formData.password) newErrors.password = "Password is required";
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
@@ -35,42 +42,23 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      setShowVerification(true);
+      const result = await register({
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        address: formData.address,
+      });
+      if (result) {
+        onSignup();
+      }
     }
   };
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  if (showVerification) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader>
-            <div className="flex justify-center mb-4">
-              <Logo />
-            </div>
-            <CardTitle>Verify your email</CardTitle>
-            <CardDescription>
-              We've sent a verification link to <strong>{formData.email}</strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Please check your email and click the verification link to activate your account.
-              </AlertDescription>
-            </Alert>
-            <Button onClick={onSignup} className="w-full bg-primary hover:bg-primary/90">
-              Continue to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -96,15 +84,27 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="firstName">First Name</Label>
                   <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={formData.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                    className={errors.name ? "border-destructive" : ""}
+                    id="firstName"
+                    placeholder="John"
+                    value={formData.firstName}
+                    onChange={(e) => handleChange("firstName", e.target.value)}
+                    className={errors.firstName ? "border-destructive" : ""}
                   />
-                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                  {errors.firstName && <p className="text-sm text-destructive">{errors.firstName}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Doe"
+                    value={formData.lastName}
+                    onChange={(e) => handleChange("lastName", e.target.value)}
+                    className={errors.lastName ? "border-destructive" : ""}
+                  />
+                  {errors.lastName && <p className="text-sm text-destructive">{errors.lastName}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -118,6 +118,19 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
                     className={errors.email ? "border-destructive" : ""}
                   />
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="01 23 45 67 89"
+                    value={formData.phone}
+                    onChange={(e) => handleChange("phone", e.target.value)}
+                    className={errors.phone ? "border-destructive" : ""}
+                  />
+                  {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -161,28 +174,6 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
                   />
                   {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City</Label>
-                    <Input
-                      id="city"
-                      placeholder="San Francisco"
-                      value={formData.city}
-                      onChange={(e) => handleChange("city", e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="country">Country</Label>
-                    <Input
-                      id="country"
-                      placeholder="United States"
-                      value={formData.country}
-                      onChange={(e) => handleChange("country", e.target.value)}
-                    />
-                  </div>
-                </div>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -192,9 +183,13 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
                 </Label>
               </div>
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90">
-                Create Account
+              <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {isLoading && (
+                <p className="text-sm text-muted-foreground">Creating your account, please wait...</p>
+              )}
             </form>
 
             <div className="mt-4 text-center text-sm">
