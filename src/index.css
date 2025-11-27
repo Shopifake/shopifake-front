@@ -3741,6 +3741,17 @@ html {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--storefront-primary-transparent), var(--storefront-secondary-transparent), transparent);
 }
 
+/* Fallback animation utilities for spinner icons */
+@keyframes sf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: sf-spin 1s linear infinite;
+}
+
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
