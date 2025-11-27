@@ -4,8 +4,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Logo } from "../shared/Logo";
-import { AlertCircle, ArrowLeft } from "lucide-react";
-import { Alert, AlertDescription } from "../ui/alert";
+import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../hooks/auth-b2e/useAuth";
 
 export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onSignup: () => void; onSwitchToLogin: () => void; onReturnToMain?: () => void }) {
@@ -21,7 +20,6 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
     country: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showVerification, setShowVerification] = useState(false);
 
   const { register, isLoading, error } = useAuth();
 

@@ -3,9 +3,9 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Chrome, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Logo } from "../shared/Logo";
-import { useAuth } from "../../hooks/auth-b2e/useAuth";
+import { useAuth } from "../../hooks/auth-b2e/index";
 
 export function OwnerLogin({ onLogin, onSwitchToSignup, onReturnToMain }: { onLogin: () => void; onSwitchToSignup: () => void; onReturnToMain?: () => void }) {
   const [email, setEmail] = useState("a@a");

@@ -24,7 +24,7 @@ export function useAuth() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Registration failed");
-      toast.success("Account created! Please verify your email.");
+      toast.success("Account created!");
       return result;
     } catch (err: any) {
       setError(err.message);
