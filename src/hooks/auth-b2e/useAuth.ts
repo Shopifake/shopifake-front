@@ -21,6 +21,7 @@ export function useAuth() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Registration failed");
@@ -39,10 +40,14 @@ export function useAuth() {
     setIsLoading(true);
     setError(null);
     try {
+      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      
       const res = await fetch(`${API_BASE_URL}/api/auth-b2e/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Login failed");
@@ -57,5 +62,28 @@ export function useAuth() {
     }
   };
 
-  return { register, login, isLoading, error };
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await fetch(`${API_BASE_URL}/api/auth-b2e/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      
+      toast.success("Logged out successfully");
+      
+      return true;
+    } catch (err: any) {
+      toast.error("Logout failed");
+      console.error(err);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { register, login, logout, isLoading, error };
 }

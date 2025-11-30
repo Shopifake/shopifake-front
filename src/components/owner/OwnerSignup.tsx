@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Logo } from "../shared/Logo";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "../../hooks/auth-b2e/useAuth";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onSignup: () => void; onSwitchToLogin: () => void; onReturnToMain?: () => void }) {
   const [formData, setFormData] = useState({
@@ -22,6 +23,7 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { register, isLoading, error } = useAuth();
+  const { refreshUser } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +52,7 @@ export function OwnerSignup({ onSignup, onSwitchToLogin, onReturnToMain }: { onS
       });
       if (result) {
         onSignup();
+        await refreshUser();
       }
     }
   };

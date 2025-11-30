@@ -1,15 +1,23 @@
 import { API_BASE_URL } from '../api-config';
+import { authFetch } from '../../utils/authFetch';
+import { useAuth } from './useAuth';
 
-export async function useDeleteProfile(token: string, reason: string) {
-  const res = await fetch(`${API_BASE_URL}/api/users/me`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`
-    },
-    body: JSON.stringify({ reason })
-  });
-  const result = await res.json();
-  if (!res.ok) throw new Error(result.error || 'Failed to delete profile');
-  return result;
+export function useDeleteProfile() {
+  const { logout } = useAuth();
+
+  const deleteProfile = async (deleteReason: string) => {
+    const res = await authFetch(`${API_BASE_URL}/api/auth-b2e/users/me`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ deleteReason }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Failed to delete profile');
+    await logout();
+    return result;
+  };
+
+  return { deleteProfile };
 }

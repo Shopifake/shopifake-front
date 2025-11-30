@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CreateSiteRequest, SiteResponse } from "../../types/api/sitesApiTypes";
-import { API_BASE_URL, DEFAULT_OWNER_ID } from "../api-config";
+import { API_BASE_URL } from "../api-config";
+import { authFetch } from "../../utils/authFetch";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 export function useCreateSite() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const { user } = useAuthContext();
 
   const createSite = async (data: CreateSiteRequest): Promise<SiteResponse | null> => {
     setIsLoading(true);
@@ -16,7 +19,7 @@ export function useCreateSite() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Owner-Id": String(DEFAULT_OWNER_ID),
+          "X-Owner-Id": user?.id || "",
         },
         body: JSON.stringify(data),
       });
@@ -27,6 +30,20 @@ export function useCreateSite() {
       }
 
       const site: SiteResponse = await response.json();
+      const linkRes = await authFetch(
+        `${API_BASE_URL}/api/auth-b2e/users/me/sites`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ siteId: site.id, role: "OWNER" }),
+        }
+      );
+
+      if (!linkRes.ok) {
+        const errorData = await linkRes.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to link site to user");
+      }
+
       return site;
     } catch (err) {
       const error = err instanceof Error ? err : new Error("Failed to create site");
@@ -40,4 +57,3 @@ export function useCreateSite() {
 
   return { createSite, isLoading, error };
 }
-

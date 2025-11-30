@@ -15,7 +15,7 @@ const getApiBaseUrl = (): string => {
     return envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
   }
   // Fallback to relative path if no env variable is set (for production)
-  return "";
+  return "localhost:9000";
 };
 
 const getRecommenderBaseUrl = (): string => {
@@ -28,5 +28,4 @@ const getRecommenderBaseUrl = (): string => {
 
 export const API_BASE_URL = getApiBaseUrl();
 export const RECOMMENDER_BASE_URL = getRecommenderBaseUrl();
-export const DEFAULT_OWNER_ID = "11111111-1111-1111-1111-111111111111";
 

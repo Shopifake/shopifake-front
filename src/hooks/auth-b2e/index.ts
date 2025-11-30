@@ -1,4 +1,3 @@
-export * from './useGetProfile';
 export * from './useUpdateProfile';
 export * from './useDeleteProfile';
 export * from './useGetManagedSites';
