@@ -42,7 +42,7 @@ export function Profile({ onAccountDeleted }: { onAccountDeleted?: () => void })
   }, [user]);
 
   // Check if user is owner of any site
-  const ownedSites = sites.filter(site => site.role === "OWNER");
+  const ownedSites = sites.filter(site => site.role === "Owner");
   const canDeleteAccount = ownedSites.length === 0;
 
   const handleSave = async () => {

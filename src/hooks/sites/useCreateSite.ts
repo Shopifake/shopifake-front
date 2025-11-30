@@ -35,7 +35,7 @@ export function useCreateSite() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ siteId: site.id, role: "OWNER" }),
+          body: JSON.stringify({ siteId: site.id, role: "Owner" }),
         }
       );
 

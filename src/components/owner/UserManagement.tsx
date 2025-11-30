@@ -8,17 +8,58 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { UserPlus, Mail, ArrowLeft } from "lucide-react";
-import { mockUsers, mockSites } from "../../lib/mock-data";
+import { mockSites } from "../../lib/mock-data";
+import { useAddManager } from "../../hooks/sites/useAddManager";
+import { useGetManagers } from "../../hooks/sites/useGetManagers";
+import { useUpdateManager } from "../../hooks/sites/useUpdateManager";
+import { useDeleteManager } from "../../hooks/sites/useDeleteManager";
+import { useAuthContext } from "../../contexts/AuthContext";
 
 export function UserManagement({ siteId, onBack }: { siteId: string; onBack?: () => void }) {
+  const currentUserEmail = useAuthContext().user?.email || "";
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<"Owner" | "CM" | "SM">("CM");
+  const { updateManager, isLoading: isUpdating } = useUpdateManager();
+  const { deleteManager, isLoading: isDeleting } = useDeleteManager();
+
+  const handleEdit = (email: string, role: string) => {
+    setEditEmail(email);
+    // Map backend role to UI role
+    let uiRole: "Owner" | "CM" | "SM" = "CM";
+    if (role === "Owner") uiRole = "Owner";
+    else if (role === "CM") uiRole = "CM";
+    else if (role === "SM") uiRole = "SM";
+    setEditRole(uiRole);
+    setEditOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    await updateManager({ siteId, email: editEmail, role: editRole });
+    setEditOpen(false);
+  };
+
+  const handleDelete = async () => {
+    await deleteManager({ siteId, email: editEmail });
+    setEditOpen(false);
+  };
+
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("Community Manager");
+  const { addManager, isLoading } = useAddManager();
 
   const site = mockSites.find(s => s.id === siteId);
-  const siteUsers = mockUsers.filter(u => u.siteId === siteId);
+  const { managers, isLoading: isManagersLoading } = useGetManagers(siteId);
 
-  const handleInvite = () => {
+  const handleInvite = async () => {
+    // Map UI role to backend role
+    let backendRole: "Owner" | "CM" | "SM" = "CM";
+    if (role === "Community Manager") backendRole = "CM";
+    else if (role === "Stock Manager") backendRole = "SM";
+    else if (role === "Admin") backendRole = "Owner";
+    await addManager({ siteId, email, role: backendRole });
     setOpen(false);
     setEmail("");
     setRole("Community Manager");
@@ -48,7 +89,7 @@ export function UserManagement({ siteId, onBack }: { siteId: string; onBack?: ()
             <DialogHeader>
               <DialogTitle>Invite Team Member</DialogTitle>
               <DialogDescription>
-                Send an invitation to add a new team member to your store
+                Add a new team member to your store
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
@@ -101,40 +142,79 @@ export function UserManagement({ siteId, onBack }: { siteId: string; onBack?: ()
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Active</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {siteUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{user.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.role}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={user.status === "active" ? "default" : "secondary"}
-                        className={user.status === "active" ? "bg-[#22C55E] hover:bg-[#22C55E]/90" : ""}
-                      >
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{user.lastActive}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
-                    </TableCell>
+                {isManagersLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6}>Loading...</TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  managers.map((entry: any) => (
+                    <TableRow key={entry.user.id}>
+                      <TableCell>{entry.user.firstName} {entry.user.lastName}</TableCell>
+                      <TableCell className="text-muted-foreground">{entry.user.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{entry.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {entry.user.email !== currentUserEmail && (
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(entry.user.email, entry.role)}>
+                            Edit
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Manager Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team Member</DialogTitle>
+            <DialogDescription>
+              Change role or remove this user from the site
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email Address</Label>
+              <Input id="edit-email" type="email" value={editEmail} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <Select value={editRole} onValueChange={(val: string) => setEditRole(val as "Owner" | "CM" | "SM")}> 
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Owner">Admin</SelectItem>
+                  <SelectItem value="CM">Community Manager</SelectItem>
+                  <SelectItem value="SM">Stock Manager</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdate} className="bg-primary hover:bg-primary/90" disabled={isUpdating}>
+                Save Changes
+              </Button>
+              <Button onClick={handleDelete} variant="destructive" disabled={isDeleting}>
+                Remove User
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
