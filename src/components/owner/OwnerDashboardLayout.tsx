@@ -47,6 +47,7 @@ export function OwnerDashboardLayout({
     if (success) {
       clearUser();
       onLogout();
+      globalThis.location.href = "/login";
     }
   };
 
