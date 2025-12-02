@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ArrowLeft, Eye, AlertTriangle } from "lucide-react";
+import { FaqChatWidget } from "./FaqChatWidget";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
@@ -481,6 +482,8 @@ export function SiteCreation({ onBack, onPreview, onSiteCreated, initialDraft }:
           </Button>
         </div>
       </div>
+
+      <FaqChatWidget />
     </div>
   );
 }
