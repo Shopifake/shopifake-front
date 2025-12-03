@@ -61,18 +61,80 @@ export function useAuth() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth-b2c/me`, {
+      const url = `${API_BASE_URL}/api/auth-b2c/customers/me`;
+      const frontendOrigin = window.location.origin;
+      const backendOrigin = API_BASE_URL.replace(/\/$/, '');
+      
+      console.log("[checkAuth] Vérification de l'authentification...");
+      console.log("[checkAuth] Frontend:", frontendOrigin);
+      console.log("[checkAuth] Backend:", backendOrigin);
+      console.log("[checkAuth] URL:", url);
+      
+      const response = await fetch(url, {
         method: "GET",
-        credentials: "include", // Include cookies
+        credentials: "include", // Important: inclut les cookies dans la requête
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+
+      console.log("[checkAuth] Status:", response.status);
+      
+      // Vérifier si les cookies sont visibles (pour débogage)
+      // Note: HttpOnly cookies ne seront pas visibles
+      const allCookies = document.cookie;
+      console.log("[checkAuth] Cookies visibles dans document.cookie:", allCookies || "(aucun)");
+      
+      // Vérifier les headers de la requête (ne peut pas être fait côté client, mais on peut vérifier la réponse)
+      const setCookieHeader = response.headers.get("Set-Cookie");
+      if (setCookieHeader) {
+        console.log("[checkAuth] Set-Cookie header reçu:", setCookieHeader);
+      }
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.customer);
+        console.log("[checkAuth] ✅ Réponse complète:", data);
+        
+        // L'API peut retourner soit { customer: {...} } soit directement le customer
+        const customer = data.customer || data;
+        console.log("[checkAuth] ✅ Customer extrait:", customer);
+        console.log("[checkAuth] ✅ Email:", customer?.email);
+        
+        if (customer && customer.id) {
+          setUser(customer);
+        } else {
+          console.error("[checkAuth] ⚠️ Structure de réponse inattendue, pas de customer valide");
+          setUser(null);
+        }
       } else {
+        // Log pour déboguer en cas d'erreur
+        const errorText = await response.text();
+        
+        console.error("[checkAuth] ❌ Erreur d'authentification:", {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText,
+          frontendOrigin,
+          backendOrigin,
+          domainesDifferents: frontendOrigin !== backendOrigin,
+        });
+        
+        // Message d'erreur spécifique pour le problème SameSite=Strict
+        if (errorText.includes('No token provided') || response.status === 401) {
+          console.error("[checkAuth] 🔴 Le cookie n'est probablement pas envoyé au backend");
+          if (frontendOrigin !== backendOrigin) {
+            console.error("[checkAuth] 🔴 CAUSE PROBABLE: Cookie avec SameSite=Strict empêche l'envoi cross-domain");
+            console.error("[checkAuth] SOLUTION: Le backend doit utiliser SameSite=Lax ou SameSite=None (avec Secure)");
+            console.error("[checkAuth] 💡 Pour vérifier: Ouvrez l'onglet Network des DevTools et regardez si le header 'Cookie' est présent dans la requête");
+          } else {
+            console.error("[checkAuth] 💡 Vérifiez que le cookie est bien défini et n'a pas expiré");
+          }
+        }
+        
         setUser(null);
       }
-    } catch {
+    } catch (err) {
+      console.error("[checkAuth] Erreur lors de la vérification d'authentification:", err);
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -93,10 +155,12 @@ export function useAuth() {
     try {
       const guestSessionId = getSessionId();
 
-      const response = await fetch(`${API_BASE_URL}/api/auth-b2c/login`, {
+      const url = `${API_BASE_URL}/api/auth-b2c/login`;
+
+      const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include", // Important: permet de recevoir les cookies Set-Cookie
         body: JSON.stringify(credentials),
       });
 
@@ -106,6 +170,20 @@ export function useAuth() {
       }
 
       const data = await response.json();
+      
+      // Vérifier si le cookie a SameSite=Strict avec des domaines différents (seulement en cas d'erreur)
+      const setCookieHeaders = response.headers.get("Set-Cookie");
+      if (setCookieHeaders) {
+        const hasSameSiteStrict = setCookieHeaders.includes('SameSite=Strict');
+        const frontendOrigin = window.location.origin;
+        const backendOrigin = API_BASE_URL.replace(/\/$/, '');
+        
+        if (hasSameSiteStrict && frontendOrigin !== backendOrigin) {
+          console.warn("[login] ⚠️ Cookie avec SameSite=Strict détecté sur des domaines différents");
+          console.warn("[login] SOLUTION: Le backend doit utiliser SameSite=Lax ou SameSite=None (avec Secure)");
+        }
+      }
+      
       setUser(data.customer);
 
       // Migrate guest cart to user cart if sessionId exists and siteId provided

@@ -14,8 +14,8 @@ const getApiBaseUrl = (): string => {
   if (envUrl) {
     return envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
   }
-  // Fallback to relative path if no env variable is set (for production)
-  return "localhost:9000";
+  // Fallback to localhost with protocol for development
+  return "http://localhost:9000";
 };
 
 const getRecommenderBaseUrl = (): string => {

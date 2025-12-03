@@ -43,16 +43,19 @@ const extractErrorMessage = async (response: Response) => {
 
 /**
  * Build headers for cart requests
- * - For authenticated users: No special header needed (backend reads JWT cookie)
+ * - For authenticated users: Include X-User-Id header (backend can also read from JWT cookie)
  * - For guest users: Include X-Session-Id header
  */
-const buildHeaders = (isAuthenticated: boolean): HeadersInit => {
+const buildHeaders = (isAuthenticated: boolean, userId?: string): HeadersInit => {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
   };
 
-  // Only send sessionId header if user is NOT authenticated
-  if (!isAuthenticated) {
+  if (isAuthenticated && userId) {
+    // Send userId header for authenticated users
+    headers["X-User-Id"] = userId;
+  } else if (!isAuthenticated) {
+    // Only send sessionId header if user is NOT authenticated
     const sessionId = getSessionId();
     if (sessionId) {
       headers["X-Session-Id"] = sessionId;
@@ -71,7 +74,7 @@ const updateSessionIdFromResponse = (response: Response): void => {
 };
 
 export function useGetCart(siteId?: string) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [cart, setCart] = useState<CartResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -88,7 +91,7 @@ export function useGetCart(siteId?: string) {
     try {
       const response = await fetch(`${API_BASE_URL}/api/orders/carts?siteId=${encodeURIComponent(siteId)}`, {
         method: "GET",
-        headers: buildHeaders(isAuthenticated),
+        headers: buildHeaders(isAuthenticated, user?.id),
         credentials: "include", // Important: Send cookies
       });
 
@@ -112,7 +115,7 @@ export function useGetCart(siteId?: string) {
     } finally {
       setIsLoading(false);
     }
-  }, [siteId, isAuthenticated]);
+  }, [siteId, isAuthenticated, user?.id]);
 
   useEffect(() => {
     fetchCart();
@@ -122,7 +125,7 @@ export function useGetCart(siteId?: string) {
 }
 
 export function useAddToCart() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -136,7 +139,7 @@ export function useAddToCart() {
           `${API_BASE_URL}/api/orders/carts/items?siteId=${encodeURIComponent(siteId)}`,
           {
             method: "POST",
-            headers: buildHeaders(isAuthenticated),
+            headers: buildHeaders(isAuthenticated, user?.id),
             credentials: "include",
             body: JSON.stringify(payload),
           }
@@ -166,14 +169,14 @@ export function useAddToCart() {
         setIsLoading(false);
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, user?.id]
   );
 
   return { addToCart, isLoading, error };
 }
 
 export function useUpdateCartItem() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -187,7 +190,7 @@ export function useUpdateCartItem() {
           `${API_BASE_URL}/api/orders/carts/items/${itemId}?siteId=${encodeURIComponent(siteId)}`,
           {
             method: "PATCH",
-            headers: buildHeaders(isAuthenticated),
+            headers: buildHeaders(isAuthenticated, user?.id),
             credentials: "include",
             body: JSON.stringify(payload),
           }
@@ -211,14 +214,14 @@ export function useUpdateCartItem() {
         setIsLoading(false);
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, user?.id]
   );
 
   return { updateCartItem, isLoading, error };
 }
 
 export function useRemoveCartItem() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -232,7 +235,7 @@ export function useRemoveCartItem() {
           `${API_BASE_URL}/api/orders/carts/items/${itemId}?siteId=${encodeURIComponent(siteId)}`,
           {
             method: "DELETE",
-            headers: buildHeaders(isAuthenticated),
+            headers: buildHeaders(isAuthenticated, user?.id),
             credentials: "include",
           }
         );
@@ -256,14 +259,14 @@ export function useRemoveCartItem() {
         setIsLoading(false);
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, user?.id]
   );
 
   return { removeCartItem, isLoading, error };
 }
 
 export function useClearCart() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -277,7 +280,7 @@ export function useClearCart() {
           `${API_BASE_URL}/api/orders/carts?siteId=${encodeURIComponent(siteId)}`,
           {
             method: "DELETE",
-            headers: buildHeaders(isAuthenticated),
+            headers: buildHeaders(isAuthenticated, user?.id),
             credentials: "include",
           }
         );
@@ -301,7 +304,7 @@ export function useClearCart() {
         setIsLoading(false);
       }
     },
-    [isAuthenticated]
+    [isAuthenticated, user?.id]
   );
 
   return { clearCart, isLoading, error };
