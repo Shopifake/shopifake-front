@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Separator } from "../ui/separator";
 import { CreditCard, Truck } from "lucide-react";
 import type { StorefrontProductEntry } from "../../types/storefront";
+import { useAuth } from "../../hooks/auth-b2c/useGetCustomers";
 
 interface CartItem {
   productId: string;
@@ -17,6 +18,7 @@ type CheckoutProps = {
   items: CartItem[];
   products: StorefrontProductEntry[];
   onComplete: () => void;
+  siteId?: string;
 };
 
 const normalizeProduct = (entry: StorefrontProductEntry) => {
@@ -37,9 +39,18 @@ const normalizeProduct = (entry: StorefrontProductEntry) => {
   };
 };
 
-export function Checkout({ items, products, onComplete }: CheckoutProps) {
+export function Checkout({ items, products, onComplete, siteId }: CheckoutProps) {
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [shippingMethod, setShippingMethod] = useState("standard");
   const [paymentMethod, setPaymentMethod] = useState("card");
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setShowLoginPrompt(true);
+    }
+  }, [authLoading, isAuthenticated]);
 
   const productMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof normalizeProduct>>();
@@ -64,6 +75,20 @@ export function Checkout({ items, products, onComplete }: CheckoutProps) {
   const shippingCost = shippingMethod === "express" ? 14.99 : subtotal > 50 ? 0 : 9.99;
   const tax = subtotal * 0.08;
   const total = subtotal + shippingCost + tax;
+
+  // Show login prompt if not authenticated
+  if (showLoginPrompt) {
+    return <LoginPrompt siteId={siteId} />;
+  }
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Verifying authentication...</p>
+      </div>
+    );
+  }
 
   if (items.length > 0 && cartItems.length === 0) {
     return (
@@ -94,22 +119,22 @@ export function Checkout({ items, products, onComplete }: CheckoutProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" required />
+                      <Input id="firstName" defaultValue={user?.firstName || ""} required />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" required />
+                      <Input id="lastName" defaultValue={user?.lastName || ""} required />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" required />
+                    <Input id="email" type="email" defaultValue={user?.email || ""} required />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="address">Street Address</Label>
-                    <Input id="address" required />
+                    <Input id="address" defaultValue={user?.address || ""} required />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -272,6 +297,133 @@ export function Checkout({ items, products, onComplete }: CheckoutProps) {
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// Login Prompt Component
+function LoginPrompt({ siteId }: { siteId?: string }) {
+  const { login, register } = useAuth();
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const success = await login({ email, password }, siteId);
+
+    setIsLoading(false);
+
+    if (success) {
+      // The Checkout component will re-render and show the checkout form
+      window.location.reload();
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const success = await register(
+      {
+        email,
+        password,
+        firstName,
+        lastName,
+      },
+      siteId
+    );
+
+    setIsLoading(false);
+
+    if (success) {
+      // The Checkout component will re-render and show the checkout form
+      window.location.reload();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <CardTitle>{isLogin ? "Login to Continue" : "Create Account"}</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {isLogin
+              ? "Please login to complete your purchase"
+              : "Create an account to complete your purchase"}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={isLogin ? handleLoginSubmit : handleRegisterSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (isLogin ? "Logging in..." : "Creating account...") : isLogin ? "Login" : "Sign Up"}
+            </Button>
+
+            <div className="text-center text-sm">
+              <span className="text-muted-foreground">
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-primary hover:underline"
+              >
+                {isLogin ? "Sign up" : "Login"}
+              </button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

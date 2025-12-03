@@ -40,8 +40,8 @@ export function OwnerLogin({
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       const result = await login({ email, password });
       if (result) {

@@ -104,21 +104,6 @@ export function SitesList({ onCreateSite, onManageSite }: {
                   <p className="mb-1">Language: {site.language}</p>
                   {site.description && <p className="line-clamp-2">{site.description}</p>}
                 </div>
-
-                <div className="flex justify-end pt-2">
-                  {site.slug && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        window.open(getSiteUrl(site.slug), "_blank");
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
               </div>
             </CardContent>
           </Card>

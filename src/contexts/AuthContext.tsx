@@ -36,14 +36,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user);
       } else {
         // En cas d'échec, nettoyer les cookies potentiellement corrompus
-        document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "b2e_accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "b2e_refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         setUser(null);
       }
     } catch {
       // En cas d'erreur, nettoyer les cookies
-      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       setUser(null);
     } finally {
       setLoading(false);

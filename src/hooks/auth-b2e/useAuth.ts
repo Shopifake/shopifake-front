@@ -40,8 +40,8 @@ export function useAuth() {
     setIsLoading(true);
     setError(null);
     try {
-      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       const res = await fetch(`${API_BASE_URL}/api/auth-b2e/login`, {
         method: "POST",
@@ -70,8 +70,8 @@ export function useAuth() {
         credentials: "include",
       });
       
-      document.cookie = "accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "b2e_refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
       
       toast.success("Logged out successfully");
       
