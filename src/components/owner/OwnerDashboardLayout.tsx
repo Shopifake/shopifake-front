@@ -1,12 +1,9 @@
 import { useState } from "react";
+import { useAuthContext } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/auth-b2e/index";
 import { Button } from "../ui/button";
 import { 
   LayoutDashboard, 
-  Package, 
-  Users, 
-  BarChart3, 
-  Settings, 
-  FileDown, 
   Globe, 
   User,
   Menu,
@@ -17,7 +14,6 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
-import { Badge } from "../ui/badge";
 import { Logo } from "../shared/Logo";
 
 interface OwnerDashboardLayoutProps {
@@ -28,27 +24,41 @@ interface OwnerDashboardLayoutProps {
   onReturnToMain?: () => void;
 }
 
-export function OwnerDashboardLayout({ children, currentPage, onNavigate, onLogout, onReturnToMain }: OwnerDashboardLayoutProps) {
+export function OwnerDashboardLayout({ 
+  children, 
+  currentPage, 
+  onNavigate, 
+  onLogout,
+  onReturnToMain 
+}: OwnerDashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  const { user, loading, clearUser } = useAuthContext();
+  const { logout } = useAuth();
+  
+  const userName = user ? `${user.firstName} ${user.lastName}` : "";
+  const userInitials = user 
+    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
+    : "";
+
+  const handleLogout = async () => {
+    const success = await logout();
+    if (success) {
+      clearUser();
+      onLogout();
+      globalThis.location.href = "/login";
+    }
+  };
 
   const menuItems = [
     { id: "overview", label: "Dashboard", icon: LayoutDashboard },
     { id: "sites", label: "My Sites", icon: Globe },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
       <aside
         className={`
           fixed top-0 left-0 z-50 h-full bg-card border-r transition-all duration-300
@@ -170,23 +180,30 @@ export function OwnerDashboardLayout({ children, currentPage, onNavigate, onLogo
                   <Button variant="ghost" className="gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        AD
+                        {loading ? "..." : userInitials || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="hidden md:inline">Admin User</span>
+                    <span className="hidden md:inline">
+                      {loading ? (
+                        <span className="animate-pulse">Loading...</span>
+                      ) : (
+                        userName || "User"
+                      )}
+                    </span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem>
+                  <div className="px-2 py-1.5 text-sm">
+                    <div className="font-medium">{userName}</div>
+                    <div className="text-xs text-muted-foreground">{user?.email}</div>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => onNavigate("profile")}>
                     <User className="mr-2 h-4 w-4" />
                     My Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={onLogout}>
+                  <DropdownMenuItem onClick={handleLogout}>
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>

@@ -85,3 +85,9 @@ export interface CurrenciesResponse {
   count: number;
 }
 
+export type UserSiteRole = "Owner" | "CM" | "SM";
+
+export type SiteWithRole = SiteResponse & {
+  role: UserSiteRole;
+};
+

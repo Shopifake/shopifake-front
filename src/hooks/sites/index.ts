@@ -10,4 +10,5 @@ export { useSuggestSlug } from "./useSuggestSlug";
 export { useCheckSlugAvailability } from "./useCheckSlugAvailability";
 export { useGetLanguages } from "./useGetLanguages";
 export { useGetCurrencies } from "./useGetCurrencies";
+export { useAddManager } from "./useAddManager";
 

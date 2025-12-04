@@ -17,7 +17,7 @@ import { SitesList } from "./components/owner/SitesList";
 import { SiteManagement } from "./components/owner/SiteManagement";
 import { SiteSettings } from "./components/owner/SiteSettings";
 import { AuditLog } from "./components/owner/AuditLog";
-import { Settings } from "./components/owner/Settings";
+import { Profile } from "./components/owner/Profile";
 import { SiteCreation } from "./components/owner/SiteCreation";
 import { SiteConfigEditor } from "./components/owner/SiteConfigEditor";
 import { OwnerDashboardLayout } from "./components/owner/OwnerDashboardLayout";
@@ -49,7 +49,7 @@ type OwnerPage =
   | "site-config"
   | "site-create"
   | "audit"
-  | "settings";
+  | "profile";
 
 export default function App() {
   const [mode, setMode] = useState<AppMode>("landing");
@@ -568,8 +568,8 @@ export default function App() {
               onBack={handleBackToSiteManagement}
             />
           )}
-          {ownerPage === "settings" && (
-            <Settings />
+          {ownerPage === "profile" && (
+            <Profile />
           )}
         </OwnerDashboardLayout>
       </>

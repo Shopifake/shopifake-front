@@ -129,6 +129,21 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
     },
   ];
 
+  const roleOptionsMap: Record<string, string[]> = {
+    Owner: ["products", "stock", "users", "audit"],
+    CM: ["products", "audit"],
+    SM: ["stock"],
+  };
+
+  const validRoles = ["Owner", "CM", "SM"];
+  const normalizedRole = validRoles.includes(site.role) ? site.role : "Owner";
+  const allowedOptionIds = roleOptionsMap[normalizedRole];
+  const isOwner = normalizedRole === "Owner";
+
+  const filteredManagementOptions = managementOptions.filter(option =>
+    allowedOptionIds.includes(option.id)
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -148,6 +163,7 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
               >
                 {statusDisplay}
               </Badge>
+              <Badge variant="outline">{normalizedRole}</Badge>
             </div>
             {site.slug && (
               <a
@@ -166,7 +182,7 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
           </div>
         </div>
         <div className="flex gap-2">
-          {(isDraft || isActive || isDisabled) && (
+          {isOwner && (isDraft || isActive || isDisabled) && (
             <Button
               variant={isDraft || isDisabled ? "default" : "destructive"}
               className="gap-2"
@@ -177,14 +193,18 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
               {isDraft ? "Activate" : isActive ? "Disable" : "Activate"}
             </Button>
           )}
-          <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-config")}>
-            <Code2 className="h-4 w-4" />
-            Edit Config
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-settings")}>
-            <Settings className="h-4 w-4" />
-            Site Settings
-          </Button>
+          {isOwner && (
+            <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-config")}>
+              <Code2 className="h-4 w-4" />
+              Edit Config
+            </Button>
+          )}
+          {isOwner && (
+            <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-settings")}>
+              <Settings className="h-4 w-4" />
+              Site Settings
+            </Button>
+          )}
         </div>
       </div>
 
@@ -241,7 +261,7 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
       <div>
         <h2 className="mb-4">Manage Site</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {managementOptions.map((option) => {
+          {filteredManagementOptions.map((option) => {
             const Icon = option.icon;
             return (
               <Card key={option.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigate(option.id)}>
