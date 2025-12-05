@@ -62,10 +62,12 @@ export default function BlobCursor({
       const x = 'clientX' in e ? e.clientX : e.touches[0].clientX;
       const y = 'clientY' in e ? e.clientY : e.touches[0].clientY;
       
-      mouseX.set(x - rect.left);
-      mouseY.set(y - rect.top);
-    },
-    [mouseX, mouseY]
+      // Center the blob on the mouse
+      const leadSize = sizes[0] ?? 60;
+      mouseX.set(x - rect.left - leadSize / 2);
+      mouseY.set(y - rect.top - leadSize / 2);
+  },
+    [mouseX, mouseY, sizes]
   );
 
   return (

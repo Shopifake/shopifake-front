@@ -1,8 +1,11 @@
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText } from "lucide-react";
-import { mockSites } from "../../lib/mock-data";
+import { ArrowLeft, ExternalLink, Package, Users, BarChart3, Settings, FileText, Power, Code2 } from "lucide-react";
+import { useGetSiteById, useUpdateSiteStatus } from "../../hooks/sites";
+import { Skeleton } from "../ui/skeleton";
+import type { SiteStatus } from "../../types/api/sitesApiTypes";
+import { getSiteUrl, BASE_DOMAIN } from "../../lib/domain-config";
 
 interface SiteManagementProps {
   siteId: string;
@@ -11,7 +14,32 @@ interface SiteManagementProps {
 }
 
 export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementProps) {
-  const site = mockSites.find(s => s.id === siteId);
+  const { site, isLoading, refetch } = useGetSiteById(siteId);
+  const { updateSiteStatus, isLoading: isUpdatingStatus } = useUpdateSiteStatus();
+  
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-8 w-px" />
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
   
   if (!site) {
     return (
@@ -29,13 +57,46 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
     );
   }
 
+  // Parse config to get additional info
+  let siteConfig: any = {};
+  try {
+    siteConfig = JSON.parse(site.config);
+  } catch (e) {
+    // Ignore parse errors
+  }
+
+  const statusDisplay = site.status.toLowerCase();
+  const isActive = site.status === "ACTIVE";
+  const isDraft = site.status === "DRAFT";
+  const isDisabled = site.status === "DISABLED";
+
+  const handleStatusToggle = async () => {
+    if (!site) return;
+
+    let newStatus: SiteStatus;
+    if (site.status === "DRAFT") {
+      newStatus = "ACTIVE";
+    } else if (site.status === "ACTIVE") {
+      newStatus = "DISABLED";
+    } else if (site.status === "DISABLED") {
+      newStatus = "ACTIVE";
+    } else {
+      return;
+    }
+
+    const updatedSite = await updateSiteStatus(siteId, newStatus);
+    if (updatedSite) {
+      refetch();
+    }
+  };
+
   const managementOptions = [
     {
       id: "products",
       title: "Products",
       description: "Manage your product catalog",
       icon: Package,
-      count: site.products,
+      count: "Manage",
       color: "text-[#3B82F6]",
       bgColor: "bg-[#3B82F6]/10",
     },
@@ -44,7 +105,7 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
       title: "Stock Management",
       description: "Track and update inventory",
       icon: BarChart3,
-      count: site.products,
+      count: "Manage",
       color: "text-[#22C55E]",
       bgColor: "bg-[#22C55E]/10",
     },
@@ -68,6 +129,21 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
     },
   ];
 
+  const roleOptionsMap: Record<string, string[]> = {
+    Owner: ["products", "stock", "users", "audit"],
+    CM: ["products", "audit"],
+    SM: ["stock"],
+  };
+
+  const validRoles = ["Owner", "CM", "SM"];
+  const normalizedRole = validRoles.includes(site.role) ? site.role : "Owner";
+  const allowedOptionIds = roleOptionsMap[normalizedRole];
+  const isOwner = normalizedRole === "Owner";
+
+  const filteredManagementOptions = managementOptions.filter(option =>
+    allowedOptionIds.includes(option.id)
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -82,27 +158,54 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
             <div className="flex items-center gap-3">
               <h1>{site.name}</h1>
               <Badge
-                variant={site.status === "active" ? "default" : "secondary"}
-                className={site.status === "active" ? "bg-[#22C55E] hover:bg-[#22C55E]/90" : ""}
+                variant={isActive ? "default" : "secondary"}
+                className={isActive ? "bg-[#22C55E] hover:bg-[#22C55E]/90" : ""}
               >
-                {site.status}
+                {statusDisplay}
               </Badge>
+              <Badge variant="outline">{normalizedRole}</Badge>
             </div>
-            <a
-              href={`https://${site.url}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-[#3B82F6] hover:underline flex items-center gap-1 mt-1"
-            >
-              {site.url}
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            {site.slug && (
+              <a
+                href={getSiteUrl(site.slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[#3B82F6] hover:underline flex items-center gap-1 mt-1"
+              >
+                {site.slug}.{BASE_DOMAIN}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {site.description && (
+              <p className="text-sm text-muted-foreground mt-2">{site.description}</p>
+            )}
           </div>
         </div>
-        <Button variant="outline" className="gap-2">
-          <Settings className="h-4 w-4" />
-          Site Settings
-        </Button>
+        <div className="flex gap-2">
+          {isOwner && (isDraft || isActive || isDisabled) && (
+            <Button
+              variant={isDraft || isDisabled ? "default" : "destructive"}
+              className="gap-2"
+              onClick={handleStatusToggle}
+              disabled={isUpdatingStatus}
+            >
+              <Power className="h-4 w-4" />
+              {isDraft ? "Activate" : isActive ? "Disable" : "Activate"}
+            </Button>
+          )}
+          {isOwner && (
+            <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-config")}>
+              <Code2 className="h-4 w-4" />
+              Edit Config
+            </Button>
+          )}
+          {isOwner && (
+            <Button variant="outline" className="gap-2" onClick={() => onNavigate("site-settings")}>
+              <Settings className="h-4 w-4" />
+              Site Settings
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -111,11 +214,13 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Products</p>
-                <p className="text-3xl mt-1">{site.products}</p>
+                <p className="text-sm text-muted-foreground">Currency</p>
+                <p className="text-3xl mt-1">{site.currency}</p>
               </div>
               <div className="bg-[#3B82F6]/10 p-3 rounded-lg">
-                <Package className="h-6 w-6 text-[#3B82F6]" />
+                <svg className="h-6 w-6 text-[#3B82F6]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
             </div>
           </CardContent>
@@ -124,11 +229,13 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total Orders</p>
-                <p className="text-3xl mt-1">{site.orders}</p>
+                <p className="text-sm text-muted-foreground">Language</p>
+                <p className="text-3xl mt-1">{site.language}</p>
               </div>
               <div className="bg-[#22C55E]/10 p-3 rounded-lg">
-                <BarChart3 className="h-6 w-6 text-[#22C55E]" />
+                <svg className="h-6 w-6 text-[#22C55E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                </svg>
               </div>
             </div>
           </CardContent>
@@ -137,12 +244,12 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-3xl mt-1">${site.revenue.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Created</p>
+                <p className="text-sm mt-1">{new Date(site.createdAt).toLocaleDateString()}</p>
               </div>
               <div className="bg-purple-500/10 p-3 rounded-lg">
                 <svg className="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
             </div>
@@ -154,7 +261,7 @@ export function SiteManagement({ siteId, onBack, onNavigate }: SiteManagementPro
       <div>
         <h2 className="mb-4">Manage Site</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {managementOptions.map((option) => {
+          {filteredManagementOptions.map((option) => {
             const Icon = option.icon;
             return (
               <Card key={option.id} className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigate(option.id)}>
