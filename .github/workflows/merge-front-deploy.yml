@@ -12,6 +12,11 @@ on:
         description: 'Kubeconfig for cluster access'
         required: true
 
+permissions:
+  contents: read
+  pull-requests: write
+  packages: write
+
 jobs:
   deploy:
     name: Deploy to Kubernetes
