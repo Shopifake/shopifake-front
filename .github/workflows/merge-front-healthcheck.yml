@@ -1,0 +1,42 @@
+name: Frontend Health Check
+
+on:
+  workflow_call:
+
+jobs:
+  healthcheck:
+    name: Verify Cluster and Namespace
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      KUBECONFIG: /tmp/kubeconfig
+      NAMESPACE: shopifake-front
+    steps:
+      - name: Setup kubeconfig
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.KUBECONFIG }}
+        run: |
+          echo "$KUBECONFIG_BASE64" | base64 -d > $KUBECONFIG
+          chmod 600 $KUBECONFIG
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'
+
+      - name: Verify cluster connectivity
+        run: |
+          echo "Testing cluster connectivity..."
+          kubectl cluster-info
+          echo "✅ Cluster is accessible"
+
+      - name: Verify namespace exists
+        run: |
+          echo "Checking if namespace $NAMESPACE exists..."
+          kubectl get namespace $NAMESPACE || {
+            echo "❌ Namespace $NAMESPACE does not exist"
+            echo "Please create it manually with: kubectl create namespace $NAMESPACE"
+            exit 1
+          }
+          echo "✅ Namespace $NAMESPACE is accessible"
+
