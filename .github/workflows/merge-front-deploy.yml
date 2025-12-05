@@ -28,8 +28,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup kubeconfig
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.kubeconfig }}
         run: |
-          echo "${{ secrets.kubeconfig }}" | base64 -d > $KUBECONFIG
+          echo "$KUBECONFIG_BASE64" | base64 -d > $KUBECONFIG
           chmod 600 $KUBECONFIG
 
       - name: Install kubectl
