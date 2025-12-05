@@ -11,6 +11,12 @@ on:
       kubeconfig:
         description: 'Kubeconfig for cluster access'
         required: true
+      vite-base-domain:
+        description: 'Base domain for Vite'
+        required: true
+      vite-api-url:
+        description: 'API URL for Vite'
+        required: true
 
 permissions:
   contents: read
@@ -53,6 +59,16 @@ jobs:
             exit 1
           }
           echo "✅ Cluster connectivity verified"
+
+      - name: Create/Update ConfigMap
+        run: |
+          echo "Creating ConfigMap with environment variables..."
+          kubectl create configmap shopifake-frontend-config \
+            --from-literal=VITE_BASE_DOMAIN="${{ secrets.vite-base-domain }}" \
+            --from-literal=VITE_API_URL="${{ secrets.vite-api-url }}" \
+            --namespace $NAMESPACE \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "✅ ConfigMap created/updated"
 
       - name: Deploy frontend with Helm
         run: |

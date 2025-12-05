@@ -15,7 +15,7 @@ const getApiBaseUrl = (): string => {
     return envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
   }
   // Fallback to localhost with protocol for development
-  return "http://localhost:9000";
+  return "";
 };
 
 const getRecommenderBaseUrl = (): string => {
