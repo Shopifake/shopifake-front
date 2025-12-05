@@ -31,4 +31,6 @@ jobs:
       image-tag: ${{ needs.build.outputs.image-tag }}
     secrets:
       kubeconfig: ${{ secrets.KUBECONFIG }}
+      vite-base-domain: ${{ secrets.VITE_BASE_DOMAIN }}
+      vite-api-url: ${{ secrets.VITE_API_URL }}
 
