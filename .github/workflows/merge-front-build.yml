@@ -2,6 +2,10 @@ name: Build Frontend
 
 on:
   workflow_call:
+    secrets:
+      github-token:
+        description: 'GitHub token for registry'
+        required: true
     outputs:
       image-tag:
         description: 'Docker image tag'
@@ -10,7 +14,6 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
 
 jobs:
   build:
@@ -39,15 +42,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Prepare lowercase repository
-        id: prep
-        run: echo "repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ steps.prep.outputs.repository }}
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=sha,prefix=sha-
           labels: |
@@ -59,7 +58,8 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.github-token }}
+          
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6

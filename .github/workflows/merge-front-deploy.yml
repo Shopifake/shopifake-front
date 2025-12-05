@@ -7,6 +7,13 @@ on:
         description: 'Docker image tag to deploy'
         required: true
         type: string
+    secrets:
+      kubeconfig:
+        description: 'Kubeconfig for cluster access'
+        required: true
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -22,9 +29,9 @@ jobs:
 
       - name: Setup kubeconfig
         env:
-          KUBECONFIG_BASE64: ${{ secrets.KUBECONFIG }}
+          KUBECONFIG_BASE64: ${{ secrets.kubeconfig }}
         run: |
-          echo "$KUBECONFIG_BASE64" | base64 -d > $KUBECONFIG
+          echo "$KUBECONFIG_BASE64" | tr -d '\n' | tr -d ' ' | base64 -d > $KUBECONFIG
           chmod 600 $KUBECONFIG
 
       - name: Install kubectl

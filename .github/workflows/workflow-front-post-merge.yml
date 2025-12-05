@@ -13,12 +13,14 @@ permissions:
 jobs:
   build:
     uses: ./.github/workflows/merge-front-build.yml
-    secrets: inherit
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
 
   healthcheck:
     needs: build
     uses: ./.github/workflows/merge-front-healthcheck.yml
-    secrets: inherit
+    secrets:
+      kubeconfig: ${{ secrets.KUBECONFIG }}
 
   deploy:
     needs: 
@@ -27,5 +29,6 @@ jobs:
     uses: ./.github/workflows/merge-front-deploy.yml
     with:
       image-tag: ${{ needs.build.outputs.image-tag }}
-    secrets: inherit
+    secrets:
+      kubeconfig: ${{ secrets.KUBECONFIG }}
 
