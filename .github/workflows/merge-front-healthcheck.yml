@@ -21,9 +21,9 @@ jobs:
     steps:
       - name: Setup kubeconfig
         env:
-          KUBECONFIG_BASE64: ${{ secrets.kubeconfig }}
+          KUBECONFIG_CONTENT: ${{ secrets.kubeconfig }}
         run: |
-          echo "$KUBECONFIG_BASE64" | base64 -d > $KUBECONFIG
+          echo "$KUBECONFIG_CONTENT" > $KUBECONFIG
           chmod 600 $KUBECONFIG
 
       - name: Install kubectl
