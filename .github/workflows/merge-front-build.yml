@@ -11,6 +11,10 @@ on:
         description: 'Docker image tag'
         value: ${{ jobs.build.outputs.image-tag }}
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     name: Build & Publish Docker Image
