@@ -12,11 +12,12 @@ interface FloatingChatWidgetProps {
 const floatingContainerStyle: CSSProperties = {
   position: "fixed",
   bottom: 16,
-  right: 16,
+  left: "50%",
+  transform: "translateX(-50%)",
   display: "flex",
   flexDirection: "column",
   gap: 12,
-  alignItems: "flex-end",
+  alignItems: "center",
   zIndex: 9999,
 };
 
