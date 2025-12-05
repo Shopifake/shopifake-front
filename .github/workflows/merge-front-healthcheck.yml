@@ -20,10 +20,8 @@ jobs:
       NAMESPACE: shopifake-front
     steps:
       - name: Setup kubeconfig
-        env:
-          KUBECONFIG_CONTENT: ${{ secrets.kubeconfig }}
         run: |
-          echo "$KUBECONFIG_CONTENT" > $KUBECONFIG
+          echo "${{ secrets.kubeconfig }}" | base64 -d > $KUBECONFIG
           chmod 600 $KUBECONFIG
 
       - name: Install kubectl
