@@ -2,15 +2,14 @@ name: Build Frontend
 
 on:
   workflow_call:
+    secrets:
+      github-token:
+        description: 'GitHub token for registry'
+        required: true
     outputs:
       image-tag:
         description: 'Docker image tag'
         value: ${{ jobs.build.outputs.image-tag }}
-
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build:
@@ -59,7 +58,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+                    password: ${{ secrets.github-token }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
