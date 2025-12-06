@@ -10,20 +10,19 @@ service:
   port: 80
 
 ingress:
-  enabled: true
-  className: "traefik"
-  annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-  hosts:
-    - host: shopifake.com
-      paths:
-        - path: /
-          pathType: Prefix
-    - host: "*.shopifake.com"
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+  enabled: false
+  # className: "traefik"
+  # annotations:
+  #   traefik.ingress.kubernetes.io/router.entrypoints: web
+  # hosts:
+  #   - host: shopifake.com
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
+  #   - host: "*.shopifake.com"
+  #     paths:
+  #       - path: /
+  #         pathType: Prefix
 
 
 resources: {}

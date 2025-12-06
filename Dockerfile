@@ -1,3 +1,4 @@
+
 FROM node:20 AS builder
 WORKDIR /app
 
@@ -5,15 +6,16 @@ WORKDIR /app
 ARG VITE_BASE_DOMAIN
 ARG VITE_API_URL
 
-# Set environment variables for build
-ENV VITE_BASE_DOMAIN=$VITE_BASE_DOMAIN
-ENV VITE_API_URL=$VITE_API_URL
+# Pass build args to Vite at build time
+ENV VITE_BASE_DOMAIN=${VITE_BASE_DOMAIN}
+ENV VITE_API_URL=${VITE_API_URL}
 
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+# Vite automatically picks up env vars prefixed with VITE_ from process.env at build time
+RUN VITE_BASE_DOMAIN=${VITE_BASE_DOMAIN} VITE_API_URL=${VITE_API_URL} npm run build
 
 FROM nginx:stable
 COPY --from=builder /app/build /usr/share/nginx/html
