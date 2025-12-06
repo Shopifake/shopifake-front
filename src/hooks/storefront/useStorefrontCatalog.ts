@@ -46,7 +46,7 @@ export function useStorefrontCatalog(siteId?: string, enabled = true) {
       const enriched: StorefrontProductEntry[] = await Promise.all(
         data.map(async (product) => {
           const [price, inventory] = await Promise.all([
-            fetchJsonSafely<PriceResponse>(`${API_BASE_URL}/api/prices/product/${product.id}/active`),
+            fetchJsonSafely<PriceResponse>(`${API_BASE_URL}/api/pricing/product/${product.id}/active`),
             fetchJsonSafely<InventoryResponse>(`${API_BASE_URL}/api/inventory/${product.id}`),
           ]);
 

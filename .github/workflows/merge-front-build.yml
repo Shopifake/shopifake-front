@@ -1,21 +1,26 @@
-name: Frontend CI
+name: Build Frontend
 
 on:
-  push:
-    branches: main
-  pull_request:
-    branches: main
+  workflow_call:
+    secrets:
+      github-token:
+        description: 'GitHub token for registry'
+        required: true
+    outputs:
+      image-tag:
+        description: 'Docker image tag'
+        value: ${{ jobs.build.outputs.image-tag }}
 
 permissions:
   contents: read
   packages: write
-  pull-requests: write
 
 jobs:
-  build-and-publish:
-    name: Build & Publish Frontend Docker Image
+  build:
+    name: Build & Publish Docker Image
     runs-on: ubuntu-latest
-
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,19 +42,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Prepare lowercase repository
-        id: prep
-        run: echo "repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ steps.prep.outputs.repository }}
+          images: ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
           labels: |
             org.opencontainers.image.title=${{ github.event.repository.name }}
             org.opencontainers.image.description=${{ github.event.repository.description }}
@@ -59,7 +58,8 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.github-token }}
+          
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -74,3 +74,10 @@ jobs:
           build-args: |
             VITE_BASE_DOMAIN=${{ secrets.VITE_BASE_DOMAIN }}
             VITE_API_URL=${{ secrets.VITE_API_URL }}
+
+      - name: Image build summary
+        run: |
+          echo "✅ Docker image built and pushed"
+          echo "Image: ${{ steps.meta.outputs.tags }}"
+          echo "Tag: ${{ steps.meta.outputs.version }}"
+

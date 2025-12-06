@@ -28,7 +28,7 @@ export function useCreatePrice() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/prices`, {
+      const response = await fetch(`${API_BASE_URL}/api/pricing`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -65,7 +65,7 @@ export function useUpdatePrice() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/prices/${priceId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/pricing/${priceId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -108,7 +108,7 @@ export function useGetProductPrices(productId?: string) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/prices/product/${productId}`);
+      const response = await fetch(`${API_BASE_URL}/api/pricing/product/${productId}`);
 
       if (!response.ok) {
         const message = await extractErrorMessage(response);
@@ -148,7 +148,7 @@ export function useGetActivePrice(productId?: string) {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/prices/product/${productId}/active`);
+      const response = await fetch(`${API_BASE_URL}/api/pricing/product/${productId}/active`);
 
       if (!response.ok) {
         const message = await extractErrorMessage(response);

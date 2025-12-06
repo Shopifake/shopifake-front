@@ -1,0 +1,36 @@
+name: Frontend CI/CD Post Merge
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/merge-front-build.yml
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  healthcheck:
+    needs: build
+    uses: ./.github/workflows/merge-front-healthcheck.yml
+    secrets:
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+
+  deploy:
+    needs: 
+      - build
+      - healthcheck
+    uses: ./.github/workflows/merge-front-deploy.yml
+    with:
+      image-tag: ${{ needs.build.outputs.image-tag }}
+    secrets:
+      kubeconfig: ${{ secrets.KUBECONFIG }}
+      vite-base-domain: ${{ secrets.VITE_BASE_DOMAIN }}
+      vite-api-url: ${{ secrets.VITE_API_URL }}
+

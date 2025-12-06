@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../hooks/auth-b2c/useGetCustomers";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -13,7 +13,7 @@ interface AuthPageProps {
 }
 
 export function AuthPage({ siteId, onSuccess }: AuthPageProps) {
-  const { login, register, isLoading } = useAuth();
+  const { login, register, isLoading, refetch } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
 
   // Login form state
@@ -31,8 +31,12 @@ export function AuthPage({ siteId, onSuccess }: AuthPageProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const success = await login({ email: loginEmail, password: loginPassword }, siteId);
-    if (success && onSuccess) {
-      onSuccess();
+    if (success) {
+      // Refresh auth state to ensure all components see the updated state
+      await refetch();
+      if (onSuccess) {
+        onSuccess();
+      }
     }
   };
 
@@ -49,14 +53,18 @@ export function AuthPage({ siteId, onSuccess }: AuthPageProps) {
       },
       siteId
     );
-    if (success && onSuccess) {
-      onSuccess();
+    if (success) {
+      // Refresh auth state to ensure all components see the updated state
+      await refetch();
+      if (onSuccess) {
+        onSuccess();
+      }
     }
   };
 
   return (
-    <div className="container max-w-lg mx-auto py-8 px-4">
-      <Card>
+    <div className="flex items-center justify-center min-h-screen py-8 px-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Welcome</CardTitle>
           <CardDescription>Login to your account or create a new one</CardDescription>

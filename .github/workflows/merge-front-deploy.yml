@@ -1,0 +1,160 @@
+name: Deploy Frontend
+
+on:
+  workflow_call:
+    inputs:
+      image-tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        type: string
+    secrets:
+      kubeconfig:
+        description: 'Kubeconfig for cluster access'
+        required: true
+      vite-base-domain:
+        description: 'Base domain for Vite'
+        required: true
+      vite-api-url:
+        description: 'API URL for Vite'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      KUBECONFIG: /tmp/kubeconfig
+      NAMESPACE: shopifake-front
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup kubeconfig
+        env:
+          KUBECONFIG_BASE64: ${{ secrets.kubeconfig }}
+        run: |
+          echo "$KUBECONFIG_BASE64" | tr -d '\n' | tr -d ' ' | base64 -d > $KUBECONFIG
+          chmod 600 $KUBECONFIG
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: 'v1.28.0'
+
+      - name: Install helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.15.0'
+
+      - name: Verify cluster connectivity
+        run: |
+          echo "Testing cluster connectivity..."
+          kubectl cluster-info
+          kubectl get namespace $NAMESPACE || {
+            echo "❌ Namespace $NAMESPACE does not exist"
+            exit 1
+          }
+          echo "✅ Cluster connectivity verified"
+
+      - name: Create/Update ConfigMap
+        run: |
+          echo "Creating ConfigMap with environment variables..."
+          kubectl create configmap shopifake-frontend-config \
+            --from-literal=VITE_BASE_DOMAIN="${{ secrets.vite-base-domain }}" \
+            --from-literal=VITE_API_URL="${{ secrets.vite-api-url }}" \
+            --namespace $NAMESPACE \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "✅ ConfigMap created/updated"
+
+      - name: Deploy frontend with Helm
+        run: |
+          IMAGE_TAG="${{ inputs.image-tag }}"
+          
+          echo "Deploying shopifake-frontend"
+          echo "  Image: ghcr.io/shopifake/shopifake-front:$IMAGE_TAG"
+          echo "  Namespace: $NAMESPACE"
+          
+          helm upgrade --install shopifake-frontend chart/ \
+            --namespace $NAMESPACE \
+            --set image.tag="$IMAGE_TAG" \
+            --wait \
+            --timeout 5m
+          
+          echo "✅ Frontend deployed"
+
+      - name: Wait for deployment to be ready
+        run: |
+          echo "Waiting for frontend deployment to be ready..."
+          kubectl wait --for=condition=available deployment/shopifake-frontend \
+            --namespace $NAMESPACE \
+            --timeout=5m
+          
+          echo "✅ Deployment is ready"
+
+      - name: Verify all pods are running
+        run: |
+          echo "Verifying pods are in Running state..."
+          
+          # Wait up to 2 minutes for pod to be running
+          MAX_ATTEMPTS=24
+          SLEEP_TIME=5
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Check attempt $ATTEMPT/$MAX_ATTEMPTS..."
+            
+            # Get pods that are NOT in Running state
+            NOT_RUNNING=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chart --field-selector=status.phase!=Running,status.phase!=Succeeded -o json | jq -r '.items | length')
+            
+            if [ "$NOT_RUNNING" -eq 0 ]; then
+              echo "✅ All pods are running!"
+              kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chart -o wide
+              exit 0
+            fi
+            
+            echo "⚠️  Found $NOT_RUNNING pod(s) not running yet:"
+            kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chart -o wide
+            
+            # Check for fatal errors
+            CRASH_PODS=$(kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chart -o json | jq -r '.items[] | select(.status.containerStatuses != null) | select(.status.containerStatuses[].state.waiting.reason | select(. == "CrashLoopBackOff" or . == "ImagePullBackOff")) | .metadata.name')
+            
+            if [ ! -z "$CRASH_PODS" ]; then
+              echo "❌ ERROR: Pods in error state detected:"
+              echo "$CRASH_PODS"
+              echo ""
+              echo "Pod details and logs:"
+              for pod in $CRASH_PODS; do
+                echo "=== $pod ==="
+                kubectl describe pod -n $NAMESPACE $pod | tail -20
+                echo "Recent logs:"
+                kubectl logs -n $NAMESPACE $pod --tail=30 || true
+                echo ""
+              done
+              exit 1
+            fi
+            
+            echo "Waiting ${SLEEP_TIME}s before next check..."
+            sleep $SLEEP_TIME
+          done
+          
+          echo "❌ ERROR: Timeout waiting for pods to be ready"
+          kubectl get pods -n $NAMESPACE -o wide
+          exit 1
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "Final deployment status:"
+          kubectl get pods -n $NAMESPACE -l app.kubernetes.io/name=chart -o wide
+          echo ""
+          echo "Service status:"
+          kubectl get svc -n $NAMESPACE shopifake-frontend
+          echo ""
+          echo "Recent events:"
+          kubectl get events -n $NAMESPACE --sort-by='.lastTimestamp' | tail -20
+
