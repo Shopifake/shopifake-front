@@ -18,6 +18,7 @@ const getBaseDomain = (): string => {
 };
 
 export const BASE_DOMAIN = getBaseDomain();
+console.log('[DEBUG] BASE_DOMAIN:', BASE_DOMAIN);
 
 /**
  * Gets the full URL for a site slug
